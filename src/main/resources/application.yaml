@@ -1,0 +1,19 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /LTUDM
+
+spring:
+  application:
+    name: LTUDM-Backend
+  datasource:
+    url: "jdbc:mysql://127.0.0.1:3306/LTUDM"
+    username: root
+    password: root
+
+r2:
+  endpoint: ${R2_ENDPOINT}
+  bucket: ${R2_BUCKET}
+  access-key: ${R2_ACCESS_KEY}
+  secret-key: ${R2_SECRET_KEY}
+  region: auto
