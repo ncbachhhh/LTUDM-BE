@@ -1,9 +1,6 @@
-package com.ncbachhhh.LTUDM.entity;
+package com.ncbachhhh.LTUDM.entity.User;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,7 +10,9 @@ import java.time.LocalDate;
 @Entity
 @Getter
 @Setter
-public class Users {
+
+@Table(name = "users")
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;              // ID dùng UUID tự động sinh

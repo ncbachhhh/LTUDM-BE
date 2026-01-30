@@ -1,9 +1,9 @@
 package com.ncbachhhh.LTUDM.repository;
 
-import com.ncbachhhh.LTUDM.entity.Users;
+import com.ncbachhhh.LTUDM.entity.User.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRepository extends JpaRepository<Users, String> {
+public interface UserRepository extends JpaRepository<User, String> {
 }

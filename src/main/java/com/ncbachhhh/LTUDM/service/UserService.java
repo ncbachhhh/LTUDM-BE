@@ -2,7 +2,7 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.UserCreationRequest;
 import com.ncbachhhh.LTUDM.repository.UserRepository;
-import com.ncbachhhh.LTUDM.entity.Users;
+import com.ncbachhhh.LTUDM.entity.User.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,8 +14,8 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public Users createUser(UserCreationRequest request) {
-        Users user = new Users();
+    public User createUser(UserCreationRequest request) {
+        User user = new User();
 
         user.setEmail(request.getEmail());
         user.setUsername(request.getUsername());
