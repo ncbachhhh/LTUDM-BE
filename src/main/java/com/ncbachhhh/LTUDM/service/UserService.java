@@ -1,7 +1,8 @@
 package com.ncbachhhh.LTUDM.service;
 
-import com.ncbachhhh.LTUDM.dto.request.UserLoginRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
+import com.ncbachhhh.LTUDM.exception.AppException;
+import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.repository.UserRepository;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,9 @@ public class UserService {
 
     public User createUser(UserRegisterRequest request) {
         User user = new User();
+
+        if (userRepository.findByEmail(request.getEmail()) != null)
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
 
         user.setEmail(request.getEmail());
         user.setUsername(request.getUsername());

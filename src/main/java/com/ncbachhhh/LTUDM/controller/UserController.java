@@ -1,6 +1,7 @@
 package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
+import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.service.UserService;
 import jakarta.validation.Valid;
@@ -15,7 +16,10 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/auth/register")
-    User createUser(@RequestBody @Valid UserRegisterRequest request) {
-        return userService.createUser(request);
+    ApiResponse<User> createUser(@RequestBody @Valid UserRegisterRequest request) {
+        ApiResponse<User> response = new ApiResponse<>();
+        response.setData(userService.createUser(request));
+
+        return response;
     }
 }
