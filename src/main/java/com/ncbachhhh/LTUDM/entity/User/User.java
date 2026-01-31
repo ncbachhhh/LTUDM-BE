@@ -22,4 +22,6 @@ public class User {
     private String display_name;    // tên hiển thị
     private String avatar_url;      // URL ảnh đại diện
     private LocalDate created_at;   // ngày tạo tài khoản
+    @Enumerated(EnumType.STRING)
+    private UserRole role;          // vai trò người dùng: USER, ADMIN
 }
