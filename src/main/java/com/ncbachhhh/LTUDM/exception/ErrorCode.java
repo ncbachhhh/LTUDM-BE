@@ -17,7 +17,7 @@ public enum ErrorCode {
 
     // ===== Auth errors =====
     USER_NOT_FOUND(404, "User not found"),
-    WRONG_PASSWORD(401, "Wrong password"),
+    WRONG_PASSWORD(401, "Wrong password or email"),
     EMAIL_ALREADY_EXISTS(400, "Email already exists"),
     USERNAME_ALREADY_EXISTS(400, "Username already exists"),
     INVALID_EMAIL_FORMAT(400, "Invalid email format"),

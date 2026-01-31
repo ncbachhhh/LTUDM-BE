@@ -1,5 +1,6 @@
 package com.ncbachhhh.LTUDM.service;
 
+import com.ncbachhhh.LTUDM.dto.request.UserLoginRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
@@ -36,5 +37,18 @@ public class UserService {
         user.setPassword_hash(password_hash);
 
         return userRepository.save(user);
+    }
+
+    public User loginUser(UserLoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail());
+        if (user == null) {
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
+            throw new AppException(ErrorCode.WRONG_PASSWORD);
+        }
+
+        return user;
     }
 }
