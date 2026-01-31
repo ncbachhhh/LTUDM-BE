@@ -2,6 +2,7 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.UserLoginRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
+import com.ncbachhhh.LTUDM.entity.User.UserRole;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.repository.UserRepository;
@@ -31,6 +32,7 @@ public class UserService {
         user.setDisplay_name(request.getDisplay_name());
         user.setAvatar_url(request.getAvatar_url());
         user.setCreated_at(java.time.LocalDate.now());
+        user.setRole(UserRole.USER);
 
         // mã hóa mật khẩu trước khi lưu
         String password_hash = passwordEncoder.encode(request.getPassword());
