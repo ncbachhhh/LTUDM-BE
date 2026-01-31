@@ -22,6 +22,9 @@ public class UserService {
         if (userRepository.findByEmail(request.getEmail()) != null)
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
 
+        if (userRepository.findByUsername(request.getUsername()) != null)
+            throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
+
         user.setEmail(request.getEmail());
         user.setUsername(request.getUsername());
         user.setDisplay_name(request.getDisplay_name());

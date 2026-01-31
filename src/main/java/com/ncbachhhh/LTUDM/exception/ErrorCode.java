@@ -19,6 +19,11 @@ public enum ErrorCode {
     USER_NOT_FOUND(404, "User not found"),
     WRONG_PASSWORD(401, "Wrong password"),
     EMAIL_ALREADY_EXISTS(400, "Email already exists"),
+    USERNAME_ALREADY_EXISTS(400, "Username already exists"),
+    INVALID_EMAIL_FORMAT(400, "Invalid email format"),
+    INVALID_USERNAME_FORMAT(400, "Username must be between 3 and 20 characters"),
+    INVALID_PASSWORD_FORMAT(400, "Password must be at least 8 characters long"),
+    INVALID_DISPLAY_NAME_FORMAT(400, "Display name must be at most 30 characters long"),
 
     // ===== Server errors =====
     INTERNAL_ERROR(500, "Internal server error"),
