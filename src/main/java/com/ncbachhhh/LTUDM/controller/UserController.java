@@ -1,6 +1,6 @@
 package com.ncbachhhh.LTUDM.controller;
 
-import com.ncbachhhh.LTUDM.dto.request.UserCreationRequest;
+import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +13,10 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @PostMapping("/users/create")
-    User createUser(@RequestBody UserCreationRequest request) {
+    @PostMapping("/auth/register")
+    User createUser(@RequestBody UserRegisterRequest request) {
         return userService.createUser(request);
     }
+
+    @PostMapping("/auth/login")
 }
