@@ -21,7 +21,7 @@ public class User {
     private String password_hash;   // mật khẩu đã mã hóa
     private String display_name;    // tên hiển thị
     private String avatar_url;      // URL ảnh đại diện
-    private LocalDate created_at;   // ngày tạo tài khoản
+    private LocalDate created_at = LocalDate.now();   // ngày tạo tài khoản
     @Enumerated(EnumType.STRING)
-    private UserRole role;          // vai trò người dùng: USER, ADMIN
+    private UserRole role = UserRole.USER;          // vai trò người dùng: USER, ADMIN
 }

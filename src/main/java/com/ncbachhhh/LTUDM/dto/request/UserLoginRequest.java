@@ -3,16 +3,19 @@ package com.ncbachhhh.LTUDM.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
-@Getter
-@Setter
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class UserLoginRequest {
     @Email(message = "INVALID_EMAIL_FORMAT")
     @NotNull
-    private String email;
+    String email;
 
     @Size(min = 8, message = "INVALID_PASSWORD_FORMAT")
-    private String password;
+    String password;
 }

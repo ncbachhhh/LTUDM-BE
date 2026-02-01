@@ -4,23 +4,29 @@ import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldDefaults;
 
-@Getter
-@Setter
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class UserRegisterRequest {
     @Email(message = "INVALID_EMAIL_FORMAT")
     @NotNull
-    private String email;
+    String email;
 
     @Size(min = 3, max = 20, message = "INVALID_USERNAME_FORMAT")
-    private String username;
+    String username;
 
     @Size(min = 8, message = "INVALID_PASSWORD_FORMAT")
-    private String password;
+    String password;
 
     @Size(max = 30, message = "INVALID_DISPLAY_NAME_FORMAT")
-    private String display_name;
-    private String avatar_url;
+    String display_name;
+    String avatar_url;
 }
