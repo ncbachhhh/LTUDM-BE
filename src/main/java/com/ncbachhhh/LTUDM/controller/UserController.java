@@ -28,14 +28,14 @@ public class UserController {
         return response;
     }
 
-    @PostMapping("/auth/login")
-    ApiResponse<User> loginUser(@RequestBody @Valid UserLoginRequest request) {
-        ApiResponse<User> response = new ApiResponse<>();
-        response.setData(userService.loginUser(request));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
-    }
+//    @PostMapping("/auth/login")
+//    ApiResponse<User> loginUser(@RequestBody @Valid UserLoginRequest request) {
+//        ApiResponse<User> response = new ApiResponse<>();
+//        response.setData(userService.loginUser(request));
+//        response.setCode(ErrorCode.SUCCESS.getCode());
+//
+//        return response;
+//    }
 
     @PostMapping("/auth/update/{userId}")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId, @RequestBody @Valid UserUpdateRequest request) {

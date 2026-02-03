@@ -41,18 +41,18 @@ public class UserService {
     }
 
     // Đăng nhập người dùng
-    public User loginUser(UserLoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail());
-        if (user == null) {
-            throw new AppException(ErrorCode.EMAIL_NOT_FOUND);
-        }
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
-            throw new AppException(ErrorCode.WRONG_PASSWORD);
-        }
-
-        return user;
-    }
+//    public User loginUser(UserLoginRequest request) {
+//        User user = userRepository.findByEmail(request.getEmail());
+//        if (user == null) {
+//            throw new AppException(ErrorCode.EMAIL_NOT_FOUND);
+//        }
+//
+//        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
+//            throw new AppException(ErrorCode.WRONG_PASSWORD);
+//        }
+//
+//        return user;
+//    }
 
     // Lấy thông tin người dùng theo ID
     public UserResponse getUserById(String userId) {
