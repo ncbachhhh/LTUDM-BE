@@ -1,4 +1,4 @@
-package com.ncbachhhh.LTUDM.dto.response;
+package com.ncbachhhh.LTUDM.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,6 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class AuthenticationResponse {
-    String accessToken;
-    boolean isAuthenticated;
+public class IntrospectRequest {
+    String token;
 }

@@ -17,3 +17,6 @@ r2:
   access-key: ${R2_ACCESS_KEY}
   secret-key: ${R2_SECRET_KEY}
   region: auto
+
+jwt:
+  secret: ${JWT_SECRET}

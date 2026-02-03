@@ -16,6 +16,7 @@ public enum ErrorCode {
     VALIDATION_FAILED(400, "Validation failed"),
 
     // ===== Auth errors =====
+    UNAUTHENTICATED(401, "Unauthenticated"),
     USER_NOT_FOUND(404, "User not found"),
     WRONG_PASSWORD(401, "Wrong password or email"),
     EMAIL_NOT_FOUND(404, "Email not found"),
