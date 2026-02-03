@@ -23,6 +23,6 @@ public class User {
     private String avatar_url;      // URL ảnh đại diện
     private LocalDate created_at = LocalDate.now();   // ngày tạo tài khoản
     @Enumerated(EnumType.STRING)
-    UserRole role = UserRole.USER;          // vai trò người dùng: USER, ADMIN
-    boolean is_active = true;      // trạng thái tài khoản: kích hoạt hay vô hiệu hóa
+    private UserRole role = UserRole.USER;          // vai trò người dùng: USER, ADMIN
+    private boolean is_active = true;      // trạng thái tài khoản: kích hoạt hay vô hiệu hóa
 }
