@@ -20,8 +20,8 @@ public class UserController {
     UserService userService;
 
     @PostMapping("/auth/register")
-    ApiResponse<User> createUser(@RequestBody @Valid UserRegisterRequest request) {
-        ApiResponse<User> response = new ApiResponse<>();
+    ApiResponse<UserResponse> createUser(@RequestBody @Valid UserRegisterRequest request) {
+        ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.createUser(request));
         response.setCode(ErrorCode.SUCCESS.getCode());
 
@@ -50,6 +50,16 @@ public class UserController {
     ApiResponse<UserResponse> getUserById(@PathVariable("userId") String userId) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getUserById(userId));
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @DeleteMapping("/user/{userId}")
+    ApiResponse<String> deleteUserById(@PathVariable("userId") String userId) {
+        ApiResponse<String> response = new ApiResponse<>();
+        userService.deleteUser(userId);
+        response.setData("Successfully deleted user with ID: " + userId);
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

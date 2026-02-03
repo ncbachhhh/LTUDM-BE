@@ -23,7 +23,8 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
 
-    public User createUser(UserRegisterRequest request) {
+    // Tạo người dùng mới
+    public UserResponse createUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail()))
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
 
@@ -36,25 +37,10 @@ public class UserService {
         String password_hash = passwordEncoder.encode(request.getPassword());
         user.setPassword_hash(password_hash);
 
-        return userRepository.save(user);
-    }
-
-    public UserResponse getUserById(String userId) {
-        return userMapper.toUserResponse(userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
-    }
-
-    public UserResponse updateUser(String userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        userMapper.updateUser(request, user);
-
-        String password_hash = passwordEncoder.encode(request.getPassword());
-        user.setPassword_hash(password_hash);
-
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Đăng nhập người dùng
     public User loginUser(UserLoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail());
         if (user == null) {
@@ -66,5 +52,31 @@ public class UserService {
         }
 
         return user;
+    }
+
+    // Lấy thông tin người dùng theo ID
+    public UserResponse getUserById(String userId) {
+        return userMapper.toUserResponse(userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
+    }
+
+    // Cập nhật thông tin người dùng
+    public UserResponse updateUser(String userId, UserUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        userMapper.updateUser(request, user);
+
+        String password_hash = passwordEncoder.encode(request.getPassword());
+        user.setPassword_hash(password_hash);
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    // Xóa người dùng
+    public void deleteUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.set_active(false);
+        userRepository.save(user);
     }
 }

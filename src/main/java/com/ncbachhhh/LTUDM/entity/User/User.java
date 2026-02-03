@@ -1,8 +1,8 @@
 package com.ncbachhhh.LTUDM.entity.User;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
 
@@ -23,5 +23,6 @@ public class User {
     private String avatar_url;      // URL ảnh đại diện
     private LocalDate created_at = LocalDate.now();   // ngày tạo tài khoản
     @Enumerated(EnumType.STRING)
-    private UserRole role = UserRole.USER;          // vai trò người dùng: USER, ADMIN
+    UserRole role = UserRole.USER;          // vai trò người dùng: USER, ADMIN
+    boolean is_active = true;      // trạng thái tài khoản: kích hoạt hay vô hiệu hóa
 }
