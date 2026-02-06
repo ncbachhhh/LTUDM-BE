@@ -67,7 +67,7 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        String token = generateToken(userOpt.getId());
+        String token = generateToken(userOpt.getId(), String.valueOf(userOpt.getRole()));
 
         return AuthenticationResponse.builder()
                 .accessToken(token)
@@ -76,7 +76,7 @@ public class AuthenticationService {
     }
 
     // Tạo token
-    private String generateToken(String userId) {
+    private String generateToken(String userId, String role) {
         JWSHeader jwsHeader = new JWSHeader(JWSAlgorithm.HS256);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
@@ -86,6 +86,7 @@ public class AuthenticationService {
                 .expirationTime(new Date(
                         Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()
                 )) // 1 hour expiration
+                .claim("scope", "ROLE_" + role) // Thêm role vào JWT
                 .build();
 
         Payload payload = new Payload(jwtClaimsSet.toJSONObject());
