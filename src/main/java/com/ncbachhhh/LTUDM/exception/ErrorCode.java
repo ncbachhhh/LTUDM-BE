@@ -17,6 +17,7 @@ public enum ErrorCode {
 
     // ===== Auth errors =====
     UNAUTHENTICATED(401, "Unauthenticated"),
+    ACCESS_DENIED(403, "No permission to access this resource"),
     USER_NOT_FOUND(404, "User not found"),
     WRONG_PASSWORD(401, "Wrong password or email"),
     EMAIL_NOT_FOUND(404, "Email not found"),

@@ -1,16 +1,15 @@
 package com.ncbachhhh.LTUDM.controller;
 
-import com.ncbachhhh.LTUDM.dto.request.UserLoginRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
-import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,7 +36,8 @@ public class UserController {
 //        return response;
 //    }
 
-    @PostMapping("/auth/update/{userId}")
+    @PostMapping("/user/update/{userId}")
+    @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId, @RequestBody @Valid UserUpdateRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.updateUser(userId, request));
@@ -47,6 +47,7 @@ public class UserController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
     ApiResponse<UserResponse> getUserById(@PathVariable("userId") String userId) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getUserById(userId));
@@ -56,6 +57,7 @@ public class UserController {
     }
 
     @DeleteMapping("/user/{userId}")
+    @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
     ApiResponse<String> deleteUserById(@PathVariable("userId") String userId) {
         ApiResponse<String> response = new ApiResponse<>();
         userService.deleteUser(userId);
