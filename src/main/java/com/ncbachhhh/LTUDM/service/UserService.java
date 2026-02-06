@@ -1,6 +1,5 @@
 package com.ncbachhhh.LTUDM.service;
 
-import com.ncbachhhh.LTUDM.dto.request.UserLoginRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
@@ -40,20 +39,6 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    // Đăng nhập người dùng
-//    public User loginUser(UserLoginRequest request) {
-//        User user = userRepository.findByEmail(request.getEmail());
-//        if (user == null) {
-//            throw new AppException(ErrorCode.EMAIL_NOT_FOUND);
-//        }
-//
-//        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
-//            throw new AppException(ErrorCode.WRONG_PASSWORD);
-//        }
-//
-//        return user;
-//    }
-
     // Lấy thông tin người dùng theo ID
     public UserResponse getUserById(String userId) {
         return userMapper.toUserResponse(userRepository.findById(userId)
@@ -66,17 +51,28 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         userMapper.updateUser(request, user);
 
-        String password_hash = passwordEncoder.encode(request.getPassword());
-        user.setPassword_hash(password_hash);
+        // Chỉ cập nhật password nếu user gửi password mới
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            String password_hash = passwordEncoder.encode(request.getPassword());
+            user.setPassword_hash(password_hash);
+        }
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
     // Xóa người dùng
-    public void deleteUser(String userId) {
+    public void banUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         user.set_active(false);
+        userRepository.save(user);
+    }
+
+    // Unbanned user
+    public void unbanUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.set_active(true);
         userRepository.save(user);
     }
 }

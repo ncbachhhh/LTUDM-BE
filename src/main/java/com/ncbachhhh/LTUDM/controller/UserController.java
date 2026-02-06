@@ -56,12 +56,23 @@ public class UserController {
         return response;
     }
 
-    @DeleteMapping("/user/{userId}")
-    @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
-    ApiResponse<String> deleteUserById(@PathVariable("userId") String userId) {
+    @GetMapping("/user/ban/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    ApiResponse<String> banUserById(@PathVariable("userId") String userId) {
         ApiResponse<String> response = new ApiResponse<>();
-        userService.deleteUser(userId);
+        userService.banUser(userId);
         response.setData("Successfully deleted user with ID: " + userId);
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @GetMapping("/user/unban/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    ApiResponse<String> unbanUserById(@PathVariable("userId") String userId) {
+        ApiResponse<String> response = new ApiResponse<>();
+        userService.unbanUser(userId);
+        response.setData("Successfully unbanned user with ID: " + userId);
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

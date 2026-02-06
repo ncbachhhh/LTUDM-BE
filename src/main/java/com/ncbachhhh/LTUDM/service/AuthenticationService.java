@@ -67,6 +67,10 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
+        if (!userOpt.is_active()) {
+            throw new AppException(ErrorCode.USER_BANNED);
+        }
+
         String token = generateToken(userOpt.getId(), String.valueOf(userOpt.getRole()));
 
         return AuthenticationResponse.builder()

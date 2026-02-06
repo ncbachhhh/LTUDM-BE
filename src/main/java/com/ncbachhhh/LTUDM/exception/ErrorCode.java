@@ -27,6 +27,7 @@ public enum ErrorCode {
     INVALID_USERNAME_FORMAT(400, "Username must be between 3 and 20 characters"),
     INVALID_PASSWORD_FORMAT(400, "Password must be at least 8 characters long"),
     INVALID_DISPLAY_NAME_FORMAT(400, "Display name must be at most 30 characters long"),
+    USER_BANNED(403, "User is banned"),
 
     // ===== Server errors =====
     INTERNAL_ERROR(500, "Internal server error"),
