@@ -1,8 +1,6 @@
 package com.ncbachhhh.LTUDM.dto.response;
 
 import com.ncbachhhh.LTUDM.entity.User.UserRole;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +18,5 @@ public class UserResponse {
     String username;
     String display_name;
     String avatar_url;
-    @Enumerated(EnumType.STRING)
     UserRole role;
 }

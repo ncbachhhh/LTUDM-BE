@@ -1,6 +1,5 @@
 package com.ncbachhhh.LTUDM.dto.request;
 
-import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

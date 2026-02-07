@@ -1,5 +1,6 @@
 package com.ncbachhhh.LTUDM.controller;
 
+import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
@@ -27,15 +28,6 @@ public class UserController {
         return response;
     }
 
-//    @PostMapping("/auth/login")
-//    ApiResponse<User> loginUser(@RequestBody @Valid UserLoginRequest request) {
-//        ApiResponse<User> response = new ApiResponse<>();
-//        response.setData(userService.loginUser(request));
-//        response.setCode(ErrorCode.SUCCESS.getCode());
-//
-//        return response;
-//    }
-
     @PostMapping("/user/update/{userId}")
     @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId, @RequestBody @Valid UserUpdateRequest request) {
@@ -45,6 +37,26 @@ public class UserController {
 
         return response;
     }
+
+    @GetMapping("/user/me")
+    ApiResponse<UserResponse> getMyInfo() {
+        ApiResponse<UserResponse> response = new ApiResponse<>();
+        response.setData(userService.getMyInfo());
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @PostMapping("/user/change-password")
+    ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
+        ApiResponse<String> response = new ApiResponse<>();
+        userService.changePassword(request);
+        response.setData("Password changed successfully");
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
 
     @GetMapping("/user/{userId}")
     @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
@@ -56,7 +68,7 @@ public class UserController {
         return response;
     }
 
-    @GetMapping("/user/ban/{userId}")
+    @PutMapping("/user/ban/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<String> banUserById(@PathVariable("userId") String userId) {
         ApiResponse<String> response = new ApiResponse<>();
@@ -67,7 +79,7 @@ public class UserController {
         return response;
     }
 
-    @GetMapping("/user/unban/{userId}")
+    @PutMapping("/user/unban/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<String> unbanUserById(@PathVariable("userId") String userId) {
         ApiResponse<String> response = new ApiResponse<>();

@@ -1,5 +1,6 @@
 package com.ncbachhhh.LTUDM.service;
 
+import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
@@ -11,6 +12,7 @@ import com.ncbachhhh.LTUDM.entity.User.User;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +41,43 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Lấy thông tin người dùng hiện tại từ token
+    public UserResponse getMyInfo() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+
+        if (authentication == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        String userId = authentication.getName();
+
+        return userMapper.toUserResponse(userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
+    }
+
+    public void changePassword(ChangePasswordRequest request) {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+
+        if (authentication == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        String userId = authentication.getName();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(request.getOld_password(), user.getPassword_hash())) {
+            throw new AppException(ErrorCode.WRONG_OLD_PASSWORD);
+        }
+        
+        String new_password_hash  = passwordEncoder.encode(request.getNew_password());
+        user.setPassword_hash(new_password_hash);
+        userRepository.save(user);
+    }
+
     // Lấy thông tin người dùng theo ID
     public UserResponse getUserById(String userId) {
         return userMapper.toUserResponse(userRepository.findById(userId)
@@ -50,12 +89,6 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         userMapper.updateUser(request, user);
-
-        // Chỉ cập nhật password nếu user gửi password mới
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            String password_hash = passwordEncoder.encode(request.getPassword());
-            user.setPassword_hash(password_hash);
-        }
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
@@ -75,4 +108,5 @@ public class UserService {
         user.set_active(true);
         userRepository.save(user);
     }
+
 }
