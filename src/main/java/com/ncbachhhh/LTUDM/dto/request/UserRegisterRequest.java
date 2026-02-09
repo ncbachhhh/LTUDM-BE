@@ -1,5 +1,6 @@
 package com.ncbachhhh.LTUDM.dto.request;
 
+import com.ncbachhhh.LTUDM.entity.User.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -28,4 +29,6 @@ public class UserRegisterRequest {
     @Size(max = 30, message = "INVALID_DISPLAY_NAME_FORMAT")
     String display_name;
     String avatar_url;
+
+    UserRole role;
 }

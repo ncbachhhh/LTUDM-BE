@@ -1,7 +1,6 @@
 package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
-import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
@@ -14,21 +13,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequestMapping("/users")
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class UserController {
     UserService userService;
 
-    @PostMapping("/auth/register")
-    ApiResponse<UserResponse> createUser(@RequestBody @Valid UserRegisterRequest request) {
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setData(userService.createUser(request));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
-    }
-
-    @PostMapping("/user/update/{userId}")
+    // PATCH /users/{userId} - Cập nhật thông tin user (chính chủ hoặc admin)
+    @PatchMapping("/{userId}")
     @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId, @RequestBody @Valid UserUpdateRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
@@ -38,7 +30,8 @@ public class UserController {
         return response;
     }
 
-    @GetMapping("/user/me")
+    // GET /users/me - Lấy thông tin user hiện tại
+    @GetMapping("/me")
     ApiResponse<UserResponse> getMyInfo() {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getMyInfo());
@@ -47,7 +40,8 @@ public class UserController {
         return response;
     }
 
-    @PostMapping("/user/change-password")
+    // POST /users/me/change-password - Đổi mật khẩu user hiện tại
+    @PostMapping("/me/change-password")
     ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
         ApiResponse<String> response = new ApiResponse<>();
         userService.changePassword(request);
@@ -57,34 +51,12 @@ public class UserController {
         return response;
     }
 
-
-    @GetMapping("/user/{userId}")
+    // GET /users/{userId} - Lấy thông tin user theo ID (chính chủ hoặc admin)
+    @GetMapping("/{userId}")
     @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
     ApiResponse<UserResponse> getUserById(@PathVariable("userId") String userId) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getUserById(userId));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
-    }
-
-    @PutMapping("/user/ban/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<String> banUserById(@PathVariable("userId") String userId) {
-        ApiResponse<String> response = new ApiResponse<>();
-        userService.banUser(userId);
-        response.setData("Successfully deleted user with ID: " + userId);
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
-    }
-
-    @PutMapping("/user/unban/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<String> unbanUserById(@PathVariable("userId") String userId) {
-        ApiResponse<String> response = new ApiResponse<>();
-        userService.unbanUser(userId);
-        response.setData("Successfully unbanned user with ID: " + userId);
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

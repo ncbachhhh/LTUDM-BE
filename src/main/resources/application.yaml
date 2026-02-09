@@ -20,3 +20,5 @@ r2:
 
 jwt:
   secret: ${JWT_SECRET}
+  access-token-expiration: 3600       # 1 hour (seconds)
+  refresh-token-expiration: 604800    # 7 days (seconds)

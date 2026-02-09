@@ -29,6 +29,7 @@ public enum ErrorCode {
     INVALID_DISPLAY_NAME_FORMAT(400, "Display name must be at most 30 characters long"),
     USER_BANNED(403, "User is banned"),
     WRONG_OLD_PASSWORD(401, "Password is incorrect"),
+    INVALID_TOKEN(401, "Token is invalid or expired"),
 
     // ===== Server errors =====
     INTERNAL_ERROR(500, "Internal server error"),

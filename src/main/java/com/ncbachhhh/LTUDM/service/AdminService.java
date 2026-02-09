@@ -30,7 +30,6 @@ public class AdminService {
             throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
 
         User user = userMapper.toUser(request);
-        user.setRole(UserRole.ADMIN);
 
         // mã hóa mật khẩu trước khi lưu
         String password_hash = passwordEncoder.encode(request.getPassword());
