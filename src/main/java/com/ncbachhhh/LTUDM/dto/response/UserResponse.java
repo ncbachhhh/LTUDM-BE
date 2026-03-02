@@ -7,6 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
+/**
+ * DTO response chứa thông tin user trả về cho client.
+ * Không bao gồm các thông tin nhạy cảm như password.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,5 +24,7 @@ public class UserResponse {
     String username;
     String display_name;
     String avatar_url;
+    LocalDateTime created_at;
     UserRole role;
+    boolean is_active;
 }

@@ -1,7 +1,6 @@
 package com.ncbachhhh.LTUDM.exception;
 
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 public enum ErrorCode {
@@ -29,6 +28,8 @@ public enum ErrorCode {
     INVALID_DISPLAY_NAME_FORMAT(400, "Display name must be at most 30 characters long"),
     USER_BANNED(403, "User is banned"),
     WRONG_OLD_PASSWORD(401, "Password is incorrect"),
+    PASSWORD_NOT_MATCH(400, "Password confirmation does not match"),
+    SAME_PASSWORD(400, "New password must be different from current password"),
     INVALID_TOKEN(401, "Token is invalid or expired"),
 
     // ===== Server errors =====
@@ -43,8 +44,8 @@ public enum ErrorCode {
         this.message = message;
     }
 
-    private int code;
-    private String message;
+    private final int code;
+    private final String message;
 
 
 }

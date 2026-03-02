@@ -72,8 +72,18 @@ public class UserService {
         if (!passwordEncoder.matches(request.getOld_password(), user.getPassword_hash())) {
             throw new AppException(ErrorCode.WRONG_OLD_PASSWORD);
         }
-        
-        String new_password_hash  = passwordEncoder.encode(request.getNew_password());
+
+        // Kiểm tra mật khẩu mới và confirm có khớp không
+        if (!request.getNew_password().equals(request.getConfirm_password())) {
+            throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
+        }
+
+        // Kiểm tra mật khẩu mới không trùng mật khẩu cũ
+        if (passwordEncoder.matches(request.getNew_password(), user.getPassword_hash())) {
+            throw new AppException(ErrorCode.SAME_PASSWORD);
+        }
+
+        String new_password_hash = passwordEncoder.encode(request.getNew_password());
         user.setPassword_hash(new_password_hash);
         userRepository.save(user);
     }
