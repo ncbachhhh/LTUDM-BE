@@ -11,6 +11,7 @@
 | File | Mô tả |
 |------|-------|
 | [API_USER.md](./API_USER.md) | Tài liệu API cho module User (Authentication, User, Admin) |
+| [API_WEBSOCKET.md](./API_WEBSOCKET.md) | Tài liệu WebSocket cho Realtime Chat |
 
 ---
 

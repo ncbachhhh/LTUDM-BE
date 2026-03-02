@@ -39,7 +39,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/users/**").authenticated() // Yêu cầu đăng nhập, @PreAuthorize kiểm tra chi tiết
+                        .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
+                        .requestMatchers("/users/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
