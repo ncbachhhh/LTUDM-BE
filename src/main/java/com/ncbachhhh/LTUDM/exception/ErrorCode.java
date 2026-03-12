@@ -32,6 +32,12 @@ public enum ErrorCode {
     SAME_PASSWORD(400, "New password must be different from current password"),
     INVALID_TOKEN(401, "Token is invalid or expired"),
 
+    // ===== Message errors =====
+    MESSAGE_NOT_FOUND(404, "Message not found"),
+    CONVERSATION_NOT_FOUND(404, "Conversation not found"),
+    NOT_CONVERSATION_MEMBER(403, "You are not a member of this conversation"),
+    EMPTY_MESSAGE(400, "Message content cannot be empty"),
+
     // ===== Server errors =====
     INTERNAL_ERROR(500, "Internal server error"),
     DATABASE_ERROR(500, "Database error"),

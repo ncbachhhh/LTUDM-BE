@@ -1,6 +1,6 @@
 # WebSocket API - Realtime Chat
 
-**WebSocket URL:** `ws://localhost:8080/ws`
+**WebSocket URL:** `ws://localhost:8080/api/v1/ws`
 
 ---
 
@@ -9,7 +9,7 @@
 ### STOMP Connect
 
 ```javascript
-const socket = new SockJS('http://localhost:8080/ws');
+const socket = new SockJS('http://localhost:8080/api/v1/ws');
 const stompClient = Stomp.over(socket);
 
 stompClient.connect(
@@ -41,17 +41,16 @@ stompClient.subscribe('/topic/conversation/123', function(message) {
 });
 ```
 
-### 2.2 Tin nhắn riêng cho user
+### 2.2 Thông báo đã đọc
 
 ```
-/user/queue/messages
+/topic/conversation/{conversationId}/read
 ```
 
-```javascript
-stompClient.subscribe('/user/queue/messages', function(message) {
-    const msg = JSON.parse(message.body);
-    console.log(msg);
-});
+### 2.3 Typing indicator
+
+```
+/topic/conversation/{conversationId}/typing
 ```
 
 ---
@@ -61,26 +60,36 @@ stompClient.subscribe('/user/queue/messages', function(message) {
 ### 3.1 Gửi tin nhắn
 
 ```
-/app/chat.send
+/app/chat/{conversationId}
 ```
 
 ```javascript
-stompClient.send('/app/chat.send', {}, JSON.stringify({
-    conversationId: '123',
+stompClient.send('/app/chat/123', {}, JSON.stringify({
     content: 'Hello!',
     type: 'TEXT'
 }));
 ```
 
-### 3.2 Đang gõ (typing)
+### 3.2 Đánh dấu đã đọc
 
 ```
-/app/chat.typing
+/app/chat/{conversationId}/read
 ```
 
 ```javascript
-stompClient.send('/app/chat.typing', {}, JSON.stringify({
-    conversationId: '123',
+stompClient.send('/app/chat/123/read', {}, {});
+```
+
+### 3.3 Đang gõ (typing)
+
+```
+/app/chat/{conversationId}/typing
+```
+
+```javascript
+stompClient.send('/app/chat/123/typing', {}, JSON.stringify({
+    userId: 'uuid',
+    displayName: 'John',
     isTyping: true
 }));
 ```
@@ -93,7 +102,6 @@ stompClient.send('/app/chat.typing', {}, JSON.stringify({
 
 ```json
 {
-    "conversationId": "uuid",
     "content": "Hello!",
     "type": "TEXT"
 }
