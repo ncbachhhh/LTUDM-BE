@@ -5,20 +5,22 @@ Base URL: `/api/v1/messages`
 ## Endpoints
 
 ### 1. Gửi tin nhắn
-```
+```http
 POST /messages
 ```
 
-**Request Body:**
+Request body:
 ```json
 {
   "conversation_id": "uuid-conversation",
   "content": "Nội dung tin nhắn",
-  "type": "TEXT"  // TEXT, IMAGE, VIDEO, FILE, SYSTEM (mặc định: TEXT)
+  "type": "TEXT"
 }
 ```
 
-**Response:**
+`type` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+
+Response:
 ```json
 {
   "code": 200,
@@ -29,19 +31,22 @@ POST /messages
     "type": "TEXT",
     "content": "Nội dung tin nhắn",
     "created_at": "2026-03-12T10:30:00",
-    "is_read": false
+    "is_read": false,
+    "is_edited": false,
+    "edited_at": null,
+    "is_recalled": false,
+    "recalled_at": null,
+    "recalled_by": null
   }
 }
 ```
 
----
-
 ### 2. Lấy tin nhắn trong conversation
-```
+```http
 GET /messages/conversation/{conversationId}
 ```
 
-**Response:**
+Response:
 ```json
 {
   "code": 200,
@@ -53,40 +58,32 @@ GET /messages/conversation/{conversationId}
       "type": "TEXT",
       "content": "Tin nhắn 1",
       "created_at": "2026-03-12T10:30:00",
-      "is_read": true
-    },
-    {
-      "id": "uuid-message-2",
-      "conversation_id": "uuid-conversation",
-      "sender_id": "uuid-other",
-      "type": "TEXT",
-      "content": "Tin nhắn 2",
-      "created_at": "2026-03-12T10:31:00",
-      "is_read": false
+      "is_read": true,
+      "is_edited": false,
+      "edited_at": null,
+      "is_recalled": false,
+      "recalled_at": null,
+      "recalled_by": null
     }
   ]
 }
 ```
 
----
-
 ### 3. Lấy tin nhắn với phân trang
-```
+```http
 GET /messages/conversation/{conversationId}/paged?page=0&size=20
 ```
 
-**Query Parameters:**
-- `page`: Số trang (mặc định: 0)
-- `size`: Số tin nhắn/trang (mặc định: 20)
+Query parameters:
+- `page`: số trang, mặc định `0`
+- `size`: số bản ghi, mặc định `20`
 
----
-
-### 4. Đánh dấu tin nhắn đã đọc
-```
+### 4. Đánh dấu một tin nhắn đã đọc
+```http
 PUT /messages/{messageId}/read
 ```
 
-**Response:**
+Response:
 ```json
 {
   "code": 200,
@@ -94,14 +91,12 @@ PUT /messages/{messageId}/read
 }
 ```
 
----
-
-### 5. Đánh dấu tất cả tin nhắn đã đọc
-```
+### 5. Đánh dấu toàn bộ tin nhắn trong conversation đã đọc
+```http
 PUT /messages/conversation/{conversationId}/read-all
 ```
 
-**Response:**
+Response:
 ```json
 {
   "code": 200,
@@ -109,16 +104,17 @@ PUT /messages/conversation/{conversationId}/read-all
 }
 ```
 
----
-
-### 6. Xóa tin nhắn
-```
+### 6. Xóa tin nhắn phía cá nhân
+```http
 DELETE /messages/{messageId}
 ```
 
-**Note:** Chỉ người gửi mới có thể xóa tin nhắn của mình (soft delete)
+Lưu ý:
+- Đây là xóa phía cá nhân, được lưu qua bảng `message_deletions`.
+- Bản ghi trong `messages` không bị xóa cứng.
+- Tin nhắn đã xóa với user hiện tại sẽ không còn xuất hiện trong danh sách của user đó.
 
-**Response:**
+Response:
 ```json
 {
   "code": 200,
@@ -126,14 +122,12 @@ DELETE /messages/{messageId}
 }
 ```
 
----
-
-### 7. Đếm tin nhắn chưa đọc
-```
+### 7. Đếm số tin nhắn chưa đọc
+```http
 GET /messages/conversation/{conversationId}/unread-count
 ```
 
-**Response:**
+Response:
 ```json
 {
   "code": 200,
@@ -141,14 +135,12 @@ GET /messages/conversation/{conversationId}/unread-count
 }
 ```
 
----
-
 ### 8. Lấy tin nhắn mới nhất
-```
+```http
 GET /messages/conversation/{conversationId}/latest
 ```
 
-**Response:**
+Response:
 ```json
 {
   "code": 200,
@@ -159,19 +151,27 @@ GET /messages/conversation/{conversationId}/latest
     "type": "TEXT",
     "content": "Tin nhắn mới nhất",
     "created_at": "2026-03-12T10:35:00",
-    "is_read": false
+    "is_read": false,
+    "is_edited": false,
+    "edited_at": null,
+    "is_recalled": false,
+    "recalled_at": null,
+    "recalled_by": null
   }
 }
 ```
 
----
+## Ghi chú nghiệp vụ
 
-## Error Codes
+- `is_read` trong response được suy ra từ bảng `message_receipts`, không nằm trực tiếp trên bảng `messages`.
+- Xóa tin nhắn phía cá nhân được lưu ở bảng `message_deletions`.
+- Schema hiện có sẵn các cột recall/edit trên `messages`, nhưng tài liệu này mới phản ánh trạng thái response hiện tại của backend.
+
+## Error codes
 
 | Code | Message |
 |------|---------|
+| 400 | Message content cannot be empty |
 | 404 | Message not found |
 | 404 | Conversation not found |
 | 403 | You are not a member of this conversation |
-| 400 | Message content cannot be empty |
-| 403 | Access denied (khi xóa tin nhắn của người khác) |

@@ -1,28 +1,51 @@
 package com.ncbachhhh.LTUDM.entity.User;
 
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDate;
-
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-
 @Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;              // ID dùng UUID tự động sinh
-    private String email;           // email người dùng
-    private String username;        // tên đăng nhập
-    private String password_hash;   // mật khẩu đã mã hóa
-    private String display_name;    // tên hiển thị
-    private String avatar_url;      // URL ảnh đại diện
-    private LocalDate created_at = LocalDate.now();   // ngày tạo tài khoản
+    private String id;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String username;
+
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
+    @Column(name = "display_name", nullable = false, length = 100)
+    private String displayName;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     @Enumerated(EnumType.STRING)
-    private UserRole role = UserRole.USER;          // vai trò người dùng: USER, ADMIN
-    private boolean is_active = true;      // trạng thái tài khoản: kích hoạt hay vô hiệu hóa
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
 }

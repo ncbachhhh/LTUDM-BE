@@ -13,19 +13,54 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<Message, String> {
 
-    // Lấy tin nhắn theo conversation_id, sắp xếp theo thời gian
-    @Query("SELECT m FROM Message m WHERE m.conversation_id = :conversationId AND m.is_deleted = false ORDER BY m.created_at ASC")
-    List<Message> findByConversationId(@Param("conversationId") String conversationId);
+    @Query("""
+            SELECT m
+            FROM Message m
+            WHERE m.conversationId = :conversationId
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageDeletion md
+                  WHERE md.id.messageId = m.id
+                    AND md.id.userId = :userId
+              )
+            ORDER BY m.createdAt ASC
+            """)
+    List<Message> findVisibleMessagesByConversation(@Param("conversationId") String conversationId,
+                                                    @Param("userId") String userId);
 
-    // Lấy tin nhắn theo conversation_id với phân trang
-    @Query("SELECT m FROM Message m WHERE m.conversation_id = :conversationId AND m.is_deleted = false ORDER BY m.created_at DESC")
-    Page<Message> findByConversationIdPaged(@Param("conversationId") String conversationId, Pageable pageable);
+    @Query("""
+            SELECT m
+            FROM Message m
+            WHERE m.conversationId = :conversationId
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageDeletion md
+                  WHERE md.id.messageId = m.id
+                    AND md.id.userId = :userId
+              )
+            ORDER BY m.createdAt DESC
+            """)
+    Page<Message> findVisibleMessagesByConversationPaged(@Param("conversationId") String conversationId,
+                                                         @Param("userId") String userId,
+                                                         Pageable pageable);
 
-    // Đếm số tin nhắn chưa đọc trong conversation
-    @Query("SELECT COUNT(m) FROM Message m WHERE m.conversation_id = :conversationId AND m.sender_id != :userId AND m.is_read = false AND m.is_deleted = false")
+    @Query("""
+            SELECT COUNT(m)
+            FROM Message m
+            WHERE m.conversationId = :conversationId
+              AND m.senderId <> :userId
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageReceipt mr
+                  WHERE mr.id.messageId = m.id
+                    AND mr.id.userId = :userId
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageDeletion md
+                  WHERE md.id.messageId = m.id
+                    AND md.id.userId = :userId
+              )
+            """)
     long countUnreadMessages(@Param("conversationId") String conversationId, @Param("userId") String userId);
-
-    // Lấy tin nhắn mới nhất của conversation
-    @Query("SELECT m FROM Message m WHERE m.conversation_id = :conversationId AND m.is_deleted = false ORDER BY m.created_at DESC LIMIT 1")
-    Message findLatestMessage(@Param("conversationId") String conversationId);
 }

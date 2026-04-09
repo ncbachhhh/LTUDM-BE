@@ -1,5 +1,6 @@
 package com.ncbachhhh.LTUDM.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,13 +20,16 @@ public class AdminRegisterRequest {
     @NotNull
     String email;
 
-    @Size(min = 3, max = 20, message = "INVALID_USERNAME_FORMAT")
+    @Size(min = 3, max = 50, message = "INVALID_USERNAME_FORMAT")
     String username;
 
     @Size(min = 8, message = "INVALID_PASSWORD_FORMAT")
     String password;
 
-    @Size(max = 30, message = "INVALID_DISPLAY_NAME_FORMAT")
-    String display_name;
-    String avatar_url;
+    @JsonProperty("display_name")
+    @Size(max = 100, message = "INVALID_DISPLAY_NAME_FORMAT")
+    String displayName;
+
+    @JsonProperty("avatar_url")
+    String avatarUrl;
 }

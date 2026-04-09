@@ -1,250 +1,78 @@
-# 📖 LTUDM Backend Documentation
+# LTUDM Backend Documentation
 
-> **Project:** LTUDM Backend  
-> **Version:** 1.0  
-> **Last Updated:** 2026-03-02
+Last updated: 2026-04-09
 
----
-
-## 📋 Mục lục tài liệu
+## Tài liệu
 
 | File | Mô tả |
 |------|-------|
-| [API_USER.md](./API_USER.md) | Tài liệu API cho module User (Authentication, User, Admin) |
-| [API_WEBSOCKET.md](./API_WEBSOCKET.md) | Tài liệu WebSocket cho Realtime Chat |
+| [API_USER.md](./API_USER.md) | API cho authentication và user |
+| [API_MESSAGE.md](./API_MESSAGE.md) | API cho message |
+| [API_WEBSOCKET.md](./API_WEBSOCKET.md) | WebSocket cho realtime chat |
 
----
+## Ghi chú trạng thái hiện tại
 
-## 🏗️ Kiến trúc hệ thống
+- `AdminController` vẫn tồn tại trong code nhưng toàn bộ endpoint admin đã bị comment out.
+- JSON request/response đang dùng snake_case ở lớp DTO.
+- Message read status được suy ra từ `message_receipts`.
+- Message delete phía cá nhân được lưu ở `message_deletions`.
+- `MessageType` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client (Frontend)                     │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Controller Layer                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │AuthController│  │UserController│  │AdminController│       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       Service Layer                          │
-│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │AuthenticationSvc │  │ UserService  │  │ AdminService │   │
-│  └──────────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Repository Layer                        │
-│  ┌──────────────────┐  ┌─────────────────────────────┐      │
-│  │  UserRepository  │  │ InvalidatedTokenRepository  │      │
-│  └──────────────────┘  └─────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         Database                             │
-│                        (MySQL/PostgreSQL)                    │
-└─────────────────────────────────────────────────────────────┘
-```
+## Authorization rules
 
----
-
-## 📁 Cấu trúc thư mục
-
-```
-src/main/java/com/ncbachhhh/LTUDM/
-├── config/                 # Cấu hình (Security, Bean...)
-│   ├── SecurityConfig.java
-│   └── UserSecurity.java
-├── controller/             # REST Controllers
-│   ├── AuthenticationController.java
-│   ├── UserController.java
-│   └── AdminController.java
-├── dto/                    # Data Transfer Objects
-│   ├── request/            # Request DTOs
-│   │   ├── AuthenticationRequest.java
-│   │   ├── UserRegisterRequest.java
-│   │   ├── UserUpdateRequest.java
-│   │   ├── ChangePasswordRequest.java
-│   │   ├── RefreshTokenRequest.java
-│   │   ├── LogoutRequest.java
-│   │   └── IntrospectRequest.java
-│   └── response/           # Response DTOs
-│       ├── ApiResponse.java
-│       ├── UserResponse.java
-│       ├── AuthenticationResponse.java
-│       └── IntrospectResponse.java
-├── entity/                 # JPA Entities
-│   ├── User/
-│   │   ├── User.java
-│   │   └── UserRole.java
-│   └── InvalidatedToken.java
-├── exception/              # Exception Handling
-│   ├── AppException.java
-│   ├── ErrorCode.java
-│   └── GlobalExceptionHandler.java
-├── mapper/                 # MapStruct Mappers
-│   └── UserMapper.java
-├── repository/             # JPA Repositories
-│   ├── UserRepository.java
-│   └── InvalidatedTokenRepository.java
-├── service/                # Business Logic
-│   ├── AuthenticationService.java
-│   ├── UserService.java
-│   └── AdminService.java
-└── LtudmApplication.java   # Main Application
-```
-
----
-
-## 🔐 Bảo mật
-
-### Authentication Flow
-
-```
-┌────────┐                                           ┌────────┐
-│ Client │                                           │ Server │
-└───┬────┘                                           └───┬────┘
-    │                                                    │
-    │  1. POST /auth/login {email, password}             │
-    │ ──────────────────────────────────────────────────>│
-    │                                                    │
-    │  2. Return {accessToken, refreshToken}             │
-    │ <──────────────────────────────────────────────────│
-    │                                                    │
-    │  3. GET /users/me (Authorization: Bearer token)    │
-    │ ──────────────────────────────────────────────────>│
-    │                                                    │
-    │  4. Return user data                               │
-    │ <──────────────────────────────────────────────────│
-    │                                                    │
-    │  5. POST /auth/refresh {refreshToken}              │
-    │ ──────────────────────────────────────────────────>│
-    │                                                    │
-    │  6. Return new {accessToken, refreshToken}         │
-    │ <──────────────────────────────────────────────────│
-    │                                                    │
-    │  7. POST /auth/logout {token}                      │
-    │ ──────────────────────────────────────────────────>│
-    │                                                    │
-    │  8. Token invalidated                              │
-    │ <──────────────────────────────────────────────────│
-```
-
-### Authorization Rules
-
-| Endpoint | Role Required | Additional Check |
+| Endpoint | Role required | Additional check |
 |----------|---------------|------------------|
-| `POST /auth/*` | None | Public |
+| `POST /auth/*` | Public | - |
 | `GET /users/me` | Authenticated | - |
 | `GET /users/{userId}` | Authenticated | Owner hoặc Admin |
 | `PATCH /users/{userId}` | Authenticated | Owner hoặc Admin |
 | `POST /users/me/change-password` | Authenticated | - |
-| `POST /admin/*` | ADMIN | - |
-| `PATCH /admin/*` | ADMIN | - |
+| `/admin/*` | Disabled | Các endpoint hiện không active |
 
----
+## Database notes
 
-## 🗄️ Database Schema
+### users
 
-### Table: users
+| Column | Type |
+|--------|------|
+| id | CHAR(36) |
+| email | VARCHAR(255) |
+| username | VARCHAR(50) |
+| password_hash | VARCHAR(255) |
+| display_name | VARCHAR(100) |
+| avatar_url | VARCHAR(500) |
+| created_at | DATETIME |
+| role | ENUM('ADMIN', 'USER') |
+| is_active | BOOLEAN |
 
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | VARCHAR(36) | PRIMARY KEY |
-| email | VARCHAR(100) | NOT NULL, UNIQUE |
-| username | VARCHAR(50) | NOT NULL, UNIQUE |
-| password_hash | VARCHAR(255) | NOT NULL |
-| display_name | VARCHAR(100) | - |
-| avatar_url | VARCHAR(500) | - |
-| created_at | DATETIME | NOT NULL |
-| role | VARCHAR(20) | NOT NULL, DEFAULT 'USER' |
-| is_active | BOOLEAN | NOT NULL, DEFAULT TRUE |
+### messages
 
-### Table: invalidated_tokens
+| Column | Type |
+|--------|------|
+| id | CHAR(36) |
+| conversation_id | CHAR(36) |
+| sender_id | CHAR(36) |
+| type | ENUM('TEXT', 'FILE', 'IMAGE', 'SYSTEM') |
+| content | TEXT |
+| created_at | DATETIME |
+| is_edited | BOOLEAN |
+| edited_at | DATETIME |
+| is_recalled | BOOLEAN |
+| recalled_at | DATETIME |
+| recalled_by | CHAR(36) |
 
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | VARCHAR(36) | PRIMARY KEY |
-| expiry_time | DATETIME | NOT NULL |
+### message_receipts
 
----
+| Column | Type |
+|--------|------|
+| message_id | CHAR(36) |
+| user_id | CHAR(36) |
+| seen_at | DATETIME |
 
-## ⚙️ Configuration
+### message_deletions
 
-### application.yaml
-
-```yaml
-jwt:
-  secret: your-secret-key-min-32-characters
-  access-token-expiration: 3600      # 1 hour
-  refresh-token-expiration: 604800   # 7 days
-```
-
----
-
-## 🚀 Quick Start
-
-```bash
-# Clone repository
-git clone <repository-url>
-
-# Navigate to project
-cd LTUDM-Backend
-
-# Run with Maven
-./mvnw spring-boot:run
-
-# Or build and run JAR
-./mvnw clean package
-java -jar target/LTUDM-0.0.1-SNAPSHOT.jar
-```
-
----
-
-## 📝 Conventions
-
-### API Response Format
-
-**Success:**
-```json
-{
-    "code": 200,
-    "message": "Optional message",
-    "data": { ... }
-}
-```
-
-**Error:**
-```json
-{
-    "code": 400,
-    "message": "Error description"
-}
-```
-
-### Naming Conventions
-
-| Type | Convention | Example |
-|------|------------|---------|
-| Entity | PascalCase | `User`, `InvalidatedToken` |
-| DTO | PascalCase + Suffix | `UserResponse`, `UserRegisterRequest` |
-| Controller | PascalCase + Controller | `UserController` |
-| Service | PascalCase + Service | `UserService` |
-| Repository | PascalCase + Repository | `UserRepository` |
-
-### HTTP Methods
-
-| Method | Usage |
-|--------|-------|
-| GET | Lấy dữ liệu |
-| POST | Tạo mới, Action |
-| PATCH | Cập nhật partial |
-| PUT | Cập nhật toàn bộ |
-| DELETE | Xóa |
+| Column | Type |
+|--------|------|
+| message_id | CHAR(36) |
+| user_id | CHAR(36) |
+| deleted_at | DATETIME |

@@ -4,11 +4,12 @@ import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
+import com.ncbachhhh.LTUDM.entity.User.User;
+import com.ncbachhhh.LTUDM.entity.User.UserRole;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.UserMapper;
 import com.ncbachhhh.LTUDM.repository.UserRepository;
-import com.ncbachhhh.LTUDM.entity.User.User;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -24,77 +25,62 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
 
-    // Tạo người dùng mới
     public UserResponse createUser(UserRegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail()))
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
-
-        if (userRepository.existsByUsername(request.getUsername()))
+        }
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
+        }
 
         User user = userMapper.toUser(request);
-
-        // mã hóa mật khẩu trước khi lưu
-        String password_hash = passwordEncoder.encode(request.getPassword());
-        user.setPassword_hash(password_hash);
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        if (user.getRole() == null) {
+            user.setRole(UserRole.USER);
+        }
+        user.setActive(true);
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    // Lấy thông tin người dùng hiện tại từ token
     public UserResponse getMyInfo() {
-        var context = SecurityContextHolder.getContext();
-        var authentication = context.getAuthentication();
-
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        String userId = authentication.getName();
-
-        return userMapper.toUserResponse(userRepository.findById(userId)
+        return userMapper.toUserResponse(userRepository.findById(authentication.getName())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
     public void changePassword(ChangePasswordRequest request) {
-        var context = SecurityContextHolder.getContext();
-        var authentication = context.getAuthentication();
-
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        String userId = authentication.getName();
-
-        User user = userRepository.findById(userId)
+        User user = userRepository.findById(authentication.getName())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        if (!passwordEncoder.matches(request.getOld_password(), user.getPassword_hash())) {
+        if (!passwordEncoder.matches(request.getOld_password(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.WRONG_OLD_PASSWORD);
         }
-
-        // Kiểm tra mật khẩu mới và confirm có khớp không
         if (!request.getNew_password().equals(request.getConfirm_password())) {
             throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
         }
-
-        // Kiểm tra mật khẩu mới không trùng mật khẩu cũ
-        if (passwordEncoder.matches(request.getNew_password(), user.getPassword_hash())) {
+        if (passwordEncoder.matches(request.getNew_password(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.SAME_PASSWORD);
         }
 
-        String new_password_hash = passwordEncoder.encode(request.getNew_password());
-        user.setPassword_hash(new_password_hash);
+        user.setPasswordHash(passwordEncoder.encode(request.getNew_password()));
         userRepository.save(user);
     }
 
-    // Lấy thông tin người dùng theo ID
     public UserResponse getUserById(String userId) {
         return userMapper.toUserResponse(userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
-    // Cập nhật thông tin người dùng
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -103,20 +89,17 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    // Xóa người dùng
     public void banUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        user.set_active(false);
+        user.setActive(false);
         userRepository.save(user);
     }
 
-    // Unbanned user
     public void unbanUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        user.set_active(true);
+        user.setActive(true);
         userRepository.save(user);
     }
-
 }

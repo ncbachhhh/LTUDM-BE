@@ -5,6 +5,7 @@ import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.entity.Message.Message;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
@@ -12,17 +13,29 @@ import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface MessageMapper {
-
-    // Chuyển từ Request sang Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "senderId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "edited", ignore = true)
+    @Mapping(target = "editedAt", ignore = true)
+    @Mapping(target = "recalled", ignore = true)
+    @Mapping(target = "recalledAt", ignore = true)
+    @Mapping(target = "recalledBy", ignore = true)
     Message toMessage(MessageRequest request);
 
-    // Cập nhật Entity từ Request (bỏ qua các field null)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "senderId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "edited", ignore = true)
+    @Mapping(target = "editedAt", ignore = true)
+    @Mapping(target = "recalled", ignore = true)
+    @Mapping(target = "recalledAt", ignore = true)
+    @Mapping(target = "recalledBy", ignore = true)
     void updateMessage(MessageRequest request, @MappingTarget Message message);
 
-    // Chuyển từ Entity sang Response
+    @Mapping(target = "read", ignore = true)
     MessageResponse toMessageResponse(Message message);
 
-    // Chuyển danh sách Entity sang danh sách Response
     List<MessageResponse> toMessageResponseList(List<Message> messages);
 }

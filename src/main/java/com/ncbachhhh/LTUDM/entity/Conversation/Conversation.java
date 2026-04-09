@@ -1,24 +1,42 @@
 package com.ncbachhhh.LTUDM.entity.Conversation;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-
 @Table(name = "conversations")
 public class Conversation {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
     @Enumerated(EnumType.STRING)
-    private ConversationType type;     // Loại phòng chat: DIRECT hoặc GROUP
-    private String title;               // Tiêu đề phòng chat
-    private LocalDate created_at;       // Ngày tạo phòng chat
-    private String created_by;          // ID người tạo phòng chat
-    private String avatar_url;          // URL avatar của phòng chat
+    @Column(nullable = false)
+    private ConversationType type;
+
+    @Column(length = 150)
+    private String title;
+
+    @Column(name = "created_by", nullable = false, length = 36)
+    private String createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "avatar_url", length = 700)
+    private String avatarUrl;
 }

@@ -1,276 +1,150 @@
 # API Documentation - User Module
 
-**Base URL:** `http://localhost:8080`
-
----
+Base URL: `http://localhost:8080/api/v1`
 
 ## 1. Authentication APIs
 
 ### 1.1 Đăng ký
-
-```
+```http
 POST /auth/register
 ```
 
-**Request:**
+Request:
 ```json
 {
+  "email": "user@example.com",
+  "username": "johndoe",
+  "password": "password123",
+  "display_name": "John Doe",
+  "avatar_url": "https://example.com/avatar.jpg"
+}
+```
+
+Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "id": "uuid-here",
     "email": "user@example.com",
     "username": "johndoe",
-    "password": "password123",
     "display_name": "John Doe",
-    "avatar_url": "https://example.com/avatar.jpg"
+    "avatar_url": "https://example.com/avatar.jpg",
+    "created_at": "2026-03-02T10:30:00",
+    "role": "USER",
+    "is_active": true
+  }
 }
 ```
-
-**Response:**
-```json
-{
-    "code": 200,
-    "data": {
-        "id": "uuid-here",
-        "email": "user@example.com",
-        "username": "johndoe",
-        "display_name": "John Doe",
-        "avatar_url": "https://example.com/avatar.jpg",
-        "created_at": "2026-03-02T10:30:00",
-        "role": "USER",
-        "is_active": true
-    }
-}
-```
-
----
 
 ### 1.2 Đăng nhập
-
-```
+```http
 POST /auth/login
 ```
 
-**Request:**
+Request:
 ```json
 {
-    "email": "user@example.com",
-    "password": "password123"
+  "email": "user@example.com",
+  "password": "password123"
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
-    "code": 200,
-    "data": {
-        "accessToken": "eyJhbGci...",
-        "refreshToken": "eyJhbGci...",
-        "isAuthenticated": true
-    }
+  "code": 200,
+  "data": {
+    "accessToken": "eyJhbGci...",
+    "refreshToken": "eyJhbGci...",
+    "isAuthenticated": true
+  }
 }
 ```
 
----
-
-### 1.3 Refresh Token
-
-```
+### 1.3 Refresh token
+```http
 POST /auth/refresh
 ```
 
-**Request:**
-```json
-{
-    "refreshToken": "eyJhbGci..."
-}
-```
-
-**Response:** Giống login
-
----
-
 ### 1.4 Logout
-
-```
+```http
 POST /auth/logout
 ```
 
-**Request:**
-```json
-{
-    "token": "eyJhbGci..."
-}
-```
-
-**Response:**
-```json
-{
-    "code": 200,
-    "message": "Logged out successfully"
-}
-```
-
----
-
-### 1.5 Kiểm tra Token
-
-```
+### 1.5 Kiểm tra token
+```http
 POST /auth/introspect
 ```
 
-**Request:**
-```json
-{
-    "token": "eyJhbGci..."
-}
-```
-
-**Response:**
-```json
-{
-    "code": 200,
-    "data": {
-        "valid": true
-    }
-}
-```
-
----
-
 ## 2. User APIs
 
-> **Header:** `Authorization: Bearer {accessToken}`
+Header bắt buộc:
+```http
+Authorization: Bearer {accessToken}
+```
 
 ### 2.1 Lấy thông tin cá nhân
-
-```
+```http
 GET /users/me
 ```
 
-**Response:**
-```json
-{
-    "code": 200,
-    "data": {
-        "id": "uuid-here",
-        "email": "user@example.com",
-        "username": "johndoe",
-        "display_name": "John Doe",
-        "avatar_url": "https://example.com/avatar.jpg",
-        "created_at": "2026-03-02T10:30:00",
-        "role": "USER",
-        "is_active": true
-    }
-}
-```
-
----
-
 ### 2.2 Lấy thông tin user theo ID
-
-```
+```http
 GET /users/{userId}
 ```
 
-> Chỉ chính chủ hoặc admin mới truy cập được
-
-**Response:** Giống `/users/me`
-
----
+Chỉ chính chủ hoặc admin mới truy cập được.
 
 ### 2.3 Cập nhật thông tin user
-
-```
+```http
 PATCH /users/{userId}
 ```
 
-> Chỉ chính chủ hoặc admin mới cập nhật được
+Chỉ chính chủ hoặc admin mới cập nhật được.
 
-**Request:**
+Request:
 ```json
 {
-    "display_name": "New Name",
-    "avatar_url": "https://example.com/new-avatar.jpg"
+  "display_name": "New Name",
+  "avatar_url": "https://example.com/new-avatar.jpg"
 }
 ```
 
-**Response:** Trả về thông tin user sau khi cập nhật
-
----
-
 ### 2.4 Đổi mật khẩu
-
-```
+```http
 POST /users/me/change-password
 ```
 
-**Request:**
+Request:
 ```json
 {
-    "old_password": "oldPassword123",
-    "new_password": "newPassword456",
-    "confirm_password": "newPassword456"
+  "old_password": "oldPassword123",
+  "new_password": "newPassword456",
+  "confirm_password": "newPassword456"
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
-    "code": 200,
-    "data": "Password changed successfully"
+  "code": 200,
+  "data": "Password changed successfully"
 }
 ```
-
----
 
 ## 3. Admin APIs
 
-> **Yêu cầu:** Role ADMIN  
-> **Header:** `Authorization: Bearer {accessToken}`
+Các API admin hiện đã bị disable trong source code.
 
-### 3.1 Tạo user mới
+Các endpoint dưới đây chỉ còn mang tính tham chiếu lịch sử và hiện không active:
+- `POST /admin/users`
+- `PUT /admin/users/{userId}/ban`
+- `PUT /admin/users/{userId}/unban`
 
-```
-POST /admin/users
-```
+Nếu bật lại `AdminController`, cần cập nhật tài liệu này đồng bộ với implementation thực tế.
 
-**Request:** Giống đăng ký
-
-**Response:** Trả về thông tin user đã tạo
-
----
-
-### 3.2 Ban user
-
-```
-PATCH /admin/users/{userId}/ban
-```
-
-**Response:**
-```json
-{
-    "code": 200,
-    "data": "Successfully banned user with ID: uuid-here"
-}
-```
-
----
-
-### 3.3 Unban user
-
-```
-PATCH /admin/users/{userId}/unban
-```
-
-**Response:**
-```json
-{
-    "code": 200,
-    "data": "Successfully unbanned user with ID: uuid-here"
-}
-```
-
----
-
-## Error Codes
+## Error codes
 
 | Code | Message |
 |------|---------|
@@ -281,10 +155,8 @@ PATCH /admin/users/{userId}/unban
 | 404 | User not found |
 | 500 | Internal server error |
 
----
-
 ## Ghi chú
 
-- **Access Token:** 1 giờ
-- **Refresh Token:** 7 ngày
-- **PATCH:** Chỉ cập nhật field được gửi, field null giữ nguyên
+- Response user hiện vẫn trả JSON theo snake_case: `display_name`, `avatar_url`, `created_at`, `is_active`.
+- `username` tối đa 50 ký tự.
+- `display_name` tối đa 100 ký tự.

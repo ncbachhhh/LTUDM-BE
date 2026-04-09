@@ -16,9 +16,9 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class ConversationMemberId implements Serializable {
-    @Column(name = "conversation_id", length = 36)
-    private String conversationId;
+public class MessageDeletionId implements Serializable {
+    @Column(name = "message_id", length = 36)
+    private String messageId;
 
     @Column(name = "user_id", length = 36)
     private String userId;

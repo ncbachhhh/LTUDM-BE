@@ -23,17 +23,19 @@ public class AdminService {
     UserMapper userMapper;
 
     public UserResponse createUser(UserRegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail()))
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
-
-        if (userRepository.existsByUsername(request.getUsername()))
+        }
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
+        }
 
         User user = userMapper.toUser(request);
-
-        // mã hóa mật khẩu trước khi lưu
-        String password_hash = passwordEncoder.encode(request.getPassword());
-        user.setPassword_hash(password_hash);
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        if (user.getRole() == null) {
+            user.setRole(UserRole.USER);
+        }
+        user.setActive(true);
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
