@@ -36,6 +36,7 @@ public class MessageService {
     MessageDeletionRepository messageDeletionRepository;
     MessageMapper messageMapper;
 
+    // Lấy id user hiện tại từ SecurityContext
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -44,10 +45,12 @@ public class MessageService {
         return authentication.getName();
     }
 
+    // Gửi tin nhắn với sender là user hiện tại
     public MessageResponse sendMessage(MessageRequest request) {
         return sendMessage(request, getCurrentUserId());
     }
 
+    // Tạo và lưu tin nhắn mới cho conversation
     public MessageResponse sendMessage(MessageRequest request, String senderId) {
         if (request.getContent() == null || request.getContent().trim().isEmpty()) {
             throw new AppException(ErrorCode.EMPTY_MESSAGE);
@@ -62,6 +65,7 @@ public class MessageService {
         return toMessageResponse(messageRepository.save(message), senderId);
     }
 
+    // Lấy toàn bộ tin nhắn hiển thị được trong một conversation
     public List<MessageResponse> getMessagesByConversation(String conversationId) {
         String userId = getCurrentUserId();
         return messageRepository.findVisibleMessagesByConversation(conversationId, userId).stream()
@@ -69,6 +73,7 @@ public class MessageService {
                 .toList();
     }
 
+    // Lấy danh sách tin nhắn có phân trang
     public Page<MessageResponse> getMessagesByConversationPaged(String conversationId, int page, int size) {
         String userId = getCurrentUserId();
         Pageable pageable = PageRequest.of(page, size);
@@ -79,6 +84,7 @@ public class MessageService {
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
 
+    // Đánh dấu một tin nhắn là đã đọc với user hiện tại
     public void markAsRead(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
@@ -97,6 +103,7 @@ public class MessageService {
         }
     }
 
+    // Đánh dấu toàn bộ tin nhắn nhìn thấy được trong conversation là đã đọc
     public void markAllAsRead(String conversationId) {
         String userId = getCurrentUserId();
         List<Message> messages = messageRepository.findVisibleMessagesByConversation(conversationId, userId);
@@ -117,6 +124,7 @@ public class MessageService {
         }
     }
 
+    // Xóa mềm tin nhắn cho riêng user hiện tại
     public void deleteMessage(String messageId) {
         String userId = getCurrentUserId();
         messageRepository.findById(messageId)
@@ -131,10 +139,12 @@ public class MessageService {
         }
     }
 
+    // Đếm số tin nhắn chưa đọc trong conversation
     public long countUnreadMessages(String conversationId) {
         return messageRepository.countUnreadMessages(conversationId, getCurrentUserId());
     }
 
+    // Lấy tin nhắn mới nhất còn hiển thị với user hiện tại
     public MessageResponse getLatestMessage(String conversationId) {
         String userId = getCurrentUserId();
         Page<Message> page = messageRepository.findVisibleMessagesByConversationPaged(conversationId, userId, PageRequest.of(0, 1));
@@ -144,6 +154,7 @@ public class MessageService {
         return toMessageResponse(page.getContent().getFirst(), userId);
     }
 
+    // Ánh xạ message entity sang response và bổ sung trạng thái đã đọc
     private MessageResponse toMessageResponse(Message message, String userId) {
         MessageResponse response = messageMapper.toMessageResponse(message);
         response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));

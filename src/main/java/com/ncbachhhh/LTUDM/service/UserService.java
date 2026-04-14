@@ -25,6 +25,7 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
 
+    // Tạo tài khoản người dùng mới
     public UserResponse createUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
@@ -43,6 +44,7 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Lấy thông tin của user đang đăng nhập
     public UserResponse getMyInfo() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -53,6 +55,7 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
+    // Đổi mật khẩu cho user hiện tại sau khi kiểm tra mật khẩu cũ
     public void changePassword(ChangePasswordRequest request) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -76,11 +79,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Lấy thông tin user theo id
     public UserResponse getUserById(String userId) {
         return userMapper.toUserResponse(userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
+    // Cập nhật thông tin cơ bản của user
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -89,6 +94,7 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Khóa tài khoản người dùng
     public void banUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -96,6 +102,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Mở khóa tài khoản người dùng
     public void unbanUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

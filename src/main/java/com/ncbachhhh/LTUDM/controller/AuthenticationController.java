@@ -32,6 +32,7 @@ public class AuthenticationController {
     UserService userService;
 
     // Đăng ký tài khoản mới
+    // POST /auth/register - Đăng ký tài khoản mới
     @PostMapping("/register")
     public ApiResponse<UserResponse> register(@RequestBody @Valid UserRegisterRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
@@ -42,6 +43,7 @@ public class AuthenticationController {
     }
 
     // Đăng nhập
+    // POST /auth/login - Đăng nhập và lấy token
     @PostMapping("/login")
     public ApiResponse<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
         var result = authenticationService.authenticate(request);
@@ -52,6 +54,7 @@ public class AuthenticationController {
     }
 
     // Refresh token - duy trì phiên đăng nhập
+    // POST /auth/refresh - Làm mới cặp token
     @PostMapping("/refresh")
     public ApiResponse<AuthenticationResponse> refreshToken(@RequestBody @Valid RefreshTokenRequest request)
             throws ParseException, JOSEException {
@@ -63,6 +66,7 @@ public class AuthenticationController {
     }
 
     // Logout - hủy token
+    // POST /auth/logout - Đăng xuất và thu hồi token
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestBody @Valid LogoutRequest request)
             throws ParseException, JOSEException {
@@ -74,6 +78,7 @@ public class AuthenticationController {
     }
 
     // Kiểm tra token
+    // POST /auth/introspect - Kiểm tra token còn hợp lệ hay không
     @PostMapping("/introspect")
     public ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request)
             throws ParseException, JOSEException {

@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
+                        .requestMatchers("/conversations/**").authenticated()
                         .requestMatchers("/users/**").authenticated()
                         .anyRequest().permitAll()
                 )

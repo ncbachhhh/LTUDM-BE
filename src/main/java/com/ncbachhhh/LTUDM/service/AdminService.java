@@ -22,6 +22,7 @@ public class AdminService {
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
 
+    // Tạo user
     public UserResponse createUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);

@@ -57,6 +57,7 @@ public class AuthenticationService {
     @Value("${jwt.refresh-token-expiration:604800}")
     protected long REFRESH_TOKEN_EXPIRATION;
 
+    // Kiểm tra token còn hợp lệ hay không
     public IntrospectResponse introspect(IntrospectRequest request) throws ParseException, JOSEException {
         boolean isValid = true;
         try {
@@ -70,6 +71,7 @@ public class AuthenticationService {
                 .build();
     }
 
+    // Xác thực email và mật khẩu để cấp access token và refresh token
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -91,6 +93,7 @@ public class AuthenticationService {
                 .build();
     }
 
+    // Xác thực refresh token cũ, thu hồi nó và cấp cặp token mới
     public AuthenticationResponse refreshToken(RefreshTokenRequest request) throws ParseException, JOSEException {
         SignedJWT signedJWT = verifyToken(request.getRefreshToken());
 
@@ -113,6 +116,7 @@ public class AuthenticationService {
                 .build();
     }
 
+    // Đăng xuất bằng cách đưa token hiện tại vào danh sách đã thu hồi
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
         try {
             SignedJWT signedJWT = verifyToken(request.getToken());
@@ -125,6 +129,7 @@ public class AuthenticationService {
         }
     }
 
+    // Kiểm tra chữ ký, hạn dùng và trạng thái thu hồi của token
     private SignedJWT verifyToken(String token) throws ParseException, JOSEException {
         JWSVerifier verifier = new MACVerifier(SECRET_KEY.getBytes());
         SignedJWT signedJWT = SignedJWT.parse(token);
@@ -139,6 +144,7 @@ public class AuthenticationService {
         return signedJWT;
     }
 
+    // Tạo JWT chứa thông tin user và quyền truy cập
     private String generateToken(String userId, String role, long expirationSeconds) {
         JWSObject jwsObject = new JWSObject(
                 new JWSHeader(JWSAlgorithm.HS256),

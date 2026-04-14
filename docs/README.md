@@ -8,6 +8,7 @@ Last updated: 2026-04-09
 |------|-------|
 | [API_USER.md](./API_USER.md) | API cho authentication và user |
 | [API_MESSAGE.md](./API_MESSAGE.md) | API cho message |
+| [API_CONVERSATION.md](./API_CONVERSATION.md) | API cho táº¡o vÃ  quáº£n lÃ½ Ä‘oáº¡n chat |
 | [API_WEBSOCKET.md](./API_WEBSOCKET.md) | WebSocket cho realtime chat |
 
 ## Ghi chú trạng thái hiện tại

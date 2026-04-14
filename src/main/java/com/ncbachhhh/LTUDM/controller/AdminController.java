@@ -17,6 +17,7 @@ public class AdminController {
     AdminService adminService;
     UserService userService;
 
+    // Các endpoint admin đang được giữ lại trong code nhưng hiện bị comment out
 //    @PostMapping("/users")
 //    ApiResponse<UserResponse> createUser(@RequestBody @Valid UserRegisterRequest request) {
 //        ApiResponse<UserResponse> response = new ApiResponse<>();
