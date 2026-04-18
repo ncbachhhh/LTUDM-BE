@@ -4,7 +4,7 @@ Base URL: `http://localhost:8080/api/v1`
 
 ## 1. Authentication APIs
 
-### 1.1 Đăng ký
+### 1.1 Dang ky
 ```http
 POST /auth/register
 ```
@@ -37,7 +37,7 @@ Response:
 }
 ```
 
-### 1.2 Đăng nhập
+### 1.2 Dang nhap
 ```http
 POST /auth/login
 ```
@@ -72,36 +72,36 @@ POST /auth/refresh
 POST /auth/logout
 ```
 
-### 1.5 Kiểm tra token
+### 1.5 Kiem tra token
 ```http
 POST /auth/introspect
 ```
 
 ## 2. User APIs
 
-Header bắt buộc:
+Header bat buoc:
 ```http
 Authorization: Bearer {accessToken}
 ```
 
-### 2.1 Lấy thông tin cá nhân
+### 2.1 Lay thong tin ca nhan
 ```http
 GET /users/me
 ```
 
-### 2.2 Lấy thông tin user theo ID
+### 2.2 Lay thong tin user theo ID
 ```http
 GET /users/{userId}
 ```
 
-Chỉ chính chủ hoặc admin mới truy cập được.
+Chi chinh chu hoac admin moi truy cap duoc.
 
-### 2.3 Cập nhật thông tin user
+### 2.3 Cap nhat thong tin user
 ```http
 PATCH /users/{userId}
 ```
 
-Chỉ chính chủ hoặc admin mới cập nhật được.
+Chi chinh chu hoac admin moi cap nhat duoc.
 
 Request:
 ```json
@@ -111,7 +111,7 @@ Request:
 }
 ```
 
-### 2.4 Đổi mật khẩu
+### 2.4 Doi mat khau
 ```http
 POST /users/me/change-password
 ```
@@ -133,16 +133,78 @@ Response:
 }
 ```
 
+### 2.5 Upload avatar
+```http
+PATCH /users/me/avatar
+```
+
+Header bat buoc:
+```http
+Authorization: Bearer {accessToken}
+Content-Type: multipart/form-data
+```
+
+Form data:
+
+| Field | Type | Required | Description |
+|------|------|----------|-------------|
+| `file` | File | Yes | Anh avatar can upload |
+
+Rule hien tai:
+- Chi ho tro `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+- Kich thuoc toi da `5MB`
+- User phai dang nhap
+
+Vi du `curl`:
+
+```bash
+curl --request PATCH "http://localhost:8080/api/v1/users/me/avatar" \
+  --header "Authorization: Bearer <accessToken>" \
+  --form "file=@D:/avatar.png"
+```
+
+Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "id": "uuid-here",
+    "email": "user@example.com",
+    "username": "johndoe",
+    "display_name": "John Doe",
+    "avatar_url": "https://<public-domain>/avatars/user-id/random-file.png",
+    "created_at": "2026-03-02T10:30:00",
+    "role": "USER",
+    "is_active": true
+  }
+}
+```
+
+Loi co the gap:
+
+| HTTP | Code | Message |
+|------|------|---------|
+| 400 | 400 | Avatar file is required |
+| 400 | 400 | Avatar must be a JPG, PNG, GIF, or WEBP image |
+| 400 | 400 | Avatar file size must not exceed 5MB |
+| 401 | 401 | Unauthenticated |
+| 500 | 500 | Failed to upload avatar |
+
+Ghi chu:
+- File duoc upload len Cloudflare R2
+- Sau khi upload thanh cong, `avatar_url` trong bang `users` se duoc cap nhat
+- URL tra ve nen dung `R2_PUBLIC_BASE_URL` de frontend truy cap truc tiep
+
 ## 3. Admin APIs
 
-Các API admin hiện đã bị disable trong source code.
+Các API admin hien da bi disable trong source code.
 
-Các endpoint dưới đây chỉ còn mang tính tham chiếu lịch sử và hiện không active:
+Các endpoint duoi day chi con mang tinh tham chieu lich su va hien khong active:
 - `POST /admin/users`
 - `PUT /admin/users/{userId}/ban`
 - `PUT /admin/users/{userId}/unban`
 
-Nếu bật lại `AdminController`, cần cập nhật tài liệu này đồng bộ với implementation thực tế.
+Neu bat lai `AdminController`, can cap nhat tai lieu nay dong bo voi implementation thuc te.
 
 ## Error codes
 
@@ -150,13 +212,15 @@ Nếu bật lại `AdminController`, cần cập nhật tài liệu này đồng
 |------|---------|
 | 400 | Email/Username already exists |
 | 400 | Validation failed |
+| 400 | Avatar file is required / invalid type / too large |
 | 401 | Unauthenticated / Wrong password |
 | 403 | Access denied / User banned |
 | 404 | User not found |
-| 500 | Internal server error |
+| 500 | Internal server error / Failed to upload avatar |
 
-## Ghi chú
+## Ghi chu
 
-- Response user hiện vẫn trả JSON theo snake_case: `display_name`, `avatar_url`, `created_at`, `is_active`.
-- `username` tối đa 50 ký tự.
-- `display_name` tối đa 100 ký tự.
+- Response user hien van tra JSON theo snake_case: `display_name`, `avatar_url`, `created_at`, `is_active`.
+- `username` toi da 50 ky tu.
+- `display_name` toi da 100 ky tu.
+- Upload avatar hien dung `multipart/form-data`, khong gui JSON body.

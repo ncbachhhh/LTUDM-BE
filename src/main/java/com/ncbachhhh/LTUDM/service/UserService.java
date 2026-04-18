@@ -16,6 +16,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -24,8 +25,8 @@ public class UserService {
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
+    R2StorageService r2StorageService;
 
-    // Tạo tài khoản người dùng mới
     public UserResponse createUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
@@ -44,7 +45,6 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    // Lấy thông tin của user đang đăng nhập
     public UserResponse getMyInfo() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -55,7 +55,6 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
-    // Đổi mật khẩu cho user hiện tại sau khi kiểm tra mật khẩu cũ
     public void changePassword(ChangePasswordRequest request) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -79,13 +78,11 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // Lấy thông tin user theo id
     public UserResponse getUserById(String userId) {
         return userMapper.toUserResponse(userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
-    // Cập nhật thông tin cơ bản của user
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -94,7 +91,19 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    // Khóa tài khoản người dùng
+    public UserResponse updateMyAvatar(MultipartFile file) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        User user = userRepository.findById(authentication.getName())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        user.setAvatarUrl(r2StorageService.uploadAvatar(user.getId(), file));
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
     public void banUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -102,7 +111,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // Mở khóa tài khoản người dùng
     public void unbanUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

@@ -1,23 +1,25 @@
 # LTUDM Backend Documentation
 
-Last updated: 2026-04-09
+Last updated: 2026-04-18
 
-## Tài liệu
+## Tai lieu
 
-| File | Mô tả |
+| File | Mo ta |
 |------|-------|
-| [API_USER.md](./API_USER.md) | API cho authentication và user |
+| [API_USER.md](./API_USER.md) | API cho authentication, user va upload avatar |
+| [API_FILE_UPLOAD.md](./API_FILE_UPLOAD.md) | Co che upload file len Cloudflare R2 va cach tai su dung trong code |
 | [API_MESSAGE.md](./API_MESSAGE.md) | API cho message |
-| [API_CONVERSATION.md](./API_CONVERSATION.md) | API cho táº¡o vÃ  quáº£n lÃ½ Ä‘oáº¡n chat |
+| [API_CONVERSATION.md](./API_CONVERSATION.md) | API cho tao va quan ly doan chat |
 | [API_WEBSOCKET.md](./API_WEBSOCKET.md) | WebSocket cho realtime chat |
 
-## Ghi chú trạng thái hiện tại
+## Ghi chu trang thai hien tai
 
-- `AdminController` vẫn tồn tại trong code nhưng toàn bộ endpoint admin đã bị comment out.
-- JSON request/response đang dùng snake_case ở lớp DTO.
-- Message read status được suy ra từ `message_receipts`.
-- Message delete phía cá nhân được lưu ở `message_deletions`.
-- `MessageType` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+- `AdminController` van ton tai trong code nhung toan bo endpoint admin da bi comment out.
+- JSON request/response dang dung snake_case o lop DTO.
+- Message read status duoc suy ra tu `message_receipts`.
+- Message delete phia ca nhan duoc luu o `message_deletions`.
+- `MessageType` hien ho tro: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+- Upload avatar dang dung Cloudflare R2 thong qua `R2StorageService`.
 
 ## Authorization rules
 
@@ -25,10 +27,11 @@ Last updated: 2026-04-09
 |----------|---------------|------------------|
 | `POST /auth/*` | Public | - |
 | `GET /users/me` | Authenticated | - |
-| `GET /users/{userId}` | Authenticated | Owner hoặc Admin |
-| `PATCH /users/{userId}` | Authenticated | Owner hoặc Admin |
+| `GET /users/{userId}` | Authenticated | Owner hoac Admin |
+| `PATCH /users/{userId}` | Authenticated | Owner hoac Admin |
+| `PATCH /users/me/avatar` | Authenticated | - |
 | `POST /users/me/change-password` | Authenticated | - |
-| `/admin/*` | Disabled | Các endpoint hiện không active |
+| `/admin/*` | Disabled | Cac endpoint hien khong active |
 
 ## Database notes
 

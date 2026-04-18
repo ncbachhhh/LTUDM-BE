@@ -10,6 +10,10 @@ spring:
     url: ${MYSQL_URL}
     username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 r2:
   endpoint: ${R2_ENDPOINT}
@@ -17,6 +21,7 @@ r2:
   access-key: ${R2_ACCESS_KEY}
   secret-key: ${R2_SECRET_KEY}
   region: auto
+  public-base-url: ${R2_PUBLIC_BASE_URL:}
 
 jwt:
   secret: ${JWT_SECRET}

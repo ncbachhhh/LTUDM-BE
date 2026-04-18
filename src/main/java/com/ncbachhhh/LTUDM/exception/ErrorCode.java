@@ -31,6 +31,10 @@ public enum ErrorCode {
     PASSWORD_NOT_MATCH(400, "Password confirmation does not match"),
     SAME_PASSWORD(400, "New password must be different from current password"),
     INVALID_TOKEN(401, "Token is invalid or expired"),
+    AVATAR_FILE_REQUIRED(400, "Avatar file is required"),
+    INVALID_AVATAR_FILE_TYPE(400, "Avatar must be a JPG, PNG, GIF, or WEBP image"),
+    AVATAR_FILE_TOO_LARGE(400, "Avatar file size must not exceed 5MB"),
+    AVATAR_UPLOAD_FAILED(500, "Failed to upload avatar"),
 
     // ===== Message errors =====
     MESSAGE_NOT_FOUND(404, "Message not found"),
