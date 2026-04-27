@@ -24,6 +24,7 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class R2StorageService {
     public static final long MAX_AVATAR_SIZE_BYTES = 5L * 1024 * 1024;
+    public static final long MAX_MESSAGE_IMAGE_SIZE_BYTES = 10L * 1024 * 1024;
     public static final Set<String> IMAGE_CONTENT_TYPES = Set.of(
             "image/jpeg",
             "image/png",
@@ -51,6 +52,19 @@ public class R2StorageService {
                 ErrorCode.INVALID_AVATAR_FILE_TYPE,
                 ErrorCode.AVATAR_FILE_TOO_LARGE,
                 ErrorCode.AVATAR_UPLOAD_FAILED
+        );
+    }
+
+    public String uploadMessageImage(String conversationId, String senderId, MultipartFile file) {
+        return uploadFile(
+                "messages/%s/%s".formatted(conversationId, senderId),
+                file,
+                IMAGE_CONTENT_TYPES,
+                MAX_MESSAGE_IMAGE_SIZE_BYTES,
+                ErrorCode.MESSAGE_IMAGE_FILE_REQUIRED,
+                ErrorCode.INVALID_MESSAGE_IMAGE_FILE_TYPE,
+                ErrorCode.MESSAGE_IMAGE_FILE_TOO_LARGE,
+                ErrorCode.MESSAGE_IMAGE_UPLOAD_FAILED
         );
     }
 

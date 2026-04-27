@@ -8,7 +8,10 @@ import com.ncbachhhh.LTUDM.service.MessageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +22,27 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MessageController {
     MessageService messageService;
+    SimpMessagingTemplate messagingTemplate;
 
     // POST /messages - Gửi tin nhắn mới
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ApiResponse<MessageResponse> sendMessage(@RequestBody MessageRequest request) {
+        MessageResponse savedMessage = messageService.sendMessage(request);
+        messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
         ApiResponse<MessageResponse> response = new ApiResponse<>();
-        response.setData(messageService.sendMessage(request));
+        response.setData(savedMessage);
+        response.setCode(ErrorCode.SUCCESS.getCode());
+        return response;
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<MessageResponse> sendMessageWithImage(
+            @RequestPart("message") MessageRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
+        MessageResponse savedMessage = messageService.sendMessage(request, file);
+        messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
+        ApiResponse<MessageResponse> response = new ApiResponse<>();
+        response.setData(savedMessage);
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }

@@ -23,9 +23,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class MessageService {
     MessageReceiptRepository messageReceiptRepository;
     MessageDeletionRepository messageDeletionRepository;
     MessageMapper messageMapper;
+    R2StorageService r2StorageService;
 
     // Lấy id user hiện tại từ SecurityContext
     private String getCurrentUserId() {
@@ -47,13 +51,21 @@ public class MessageService {
 
     // Gửi tin nhắn với sender là user hiện tại
     public MessageResponse sendMessage(MessageRequest request) {
-        return sendMessage(request, getCurrentUserId());
+        return sendMessage(request, null, getCurrentUserId());
+    }
+
+    public MessageResponse sendMessage(MessageRequest request, MultipartFile imageFile) {
+        return sendMessage(request, imageFile, getCurrentUserId());
     }
 
     // Tạo và lưu tin nhắn mới cho conversation
     public MessageResponse sendMessage(MessageRequest request, String senderId) {
-        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
-            throw new AppException(ErrorCode.EMPTY_MESSAGE);
+        return sendMessage(request, null, senderId);
+    }
+
+    public MessageResponse sendMessage(MessageRequest request, MultipartFile imageFile, String senderId) {
+        if (!StringUtils.hasText(senderId)) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
         Message message = messageMapper.toMessage(request);
@@ -61,8 +73,31 @@ public class MessageService {
         if (message.getType() == null) {
             message.setType(MessageType.TEXT);
         }
+        message.setContent(resolveMessageContent(request, imageFile, senderId, message.getType()));
 
         return toMessageResponse(messageRepository.save(message), senderId);
+    }
+
+    private String resolveMessageContent(
+            MessageRequest request,
+            MultipartFile imageFile,
+            String senderId,
+            MessageType messageType
+    ) {
+        if (messageType == MessageType.IMAGE) {
+            return r2StorageService.uploadMessageImage(request.getConversationId(), senderId, imageFile);
+        }
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
+
+        String content = Objects.requireNonNullElse(request.getContent(), "").trim();
+        if (content.isEmpty()) {
+            throw new AppException(ErrorCode.EMPTY_MESSAGE);
+        }
+
+        return content;
     }
 
     // Lấy toàn bộ tin nhắn hiển thị được trong một conversation
@@ -105,7 +140,10 @@ public class MessageService {
 
     // Đánh dấu toàn bộ tin nhắn nhìn thấy được trong conversation là đã đọc
     public void markAllAsRead(String conversationId) {
-        String userId = getCurrentUserId();
+        markAllAsRead(conversationId, getCurrentUserId());
+    }
+
+    public void markAllAsRead(String conversationId, String userId) {
         List<Message> messages = messageRepository.findVisibleMessagesByConversation(conversationId, userId);
 
         List<MessageReceipt> newReceipts = messages.stream()

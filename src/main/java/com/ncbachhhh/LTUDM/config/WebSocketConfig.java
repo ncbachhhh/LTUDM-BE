@@ -33,6 +33,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Endpoint để client kết nối WebSocket
         // URL: ws://localhost:8080/ws
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*"); // Production: thay bằng domain cụ thể
+                .setAllowedOriginPatterns("*")
+                .withSockJS(); // Cho phep dung ca native WebSocket va SockJS fallback
     }
 }

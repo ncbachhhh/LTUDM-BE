@@ -49,6 +49,11 @@ public enum ErrorCode {
     GROUP_OPERATION_NOT_ALLOWED(400, "This operation is only allowed for group conversations"),
     NOT_GROUP_MANAGER(403, "You do not have permission to manage this group"),
     EMPTY_MESSAGE(400, "Message content cannot be empty"),
+    MESSAGE_IMAGE_FILE_REQUIRED(400, "Image message requires an image file"),
+    INVALID_MESSAGE_IMAGE_FILE_TYPE(400, "Message image must be a JPG, PNG, GIF, or WEBP image"),
+    MESSAGE_IMAGE_FILE_TOO_LARGE(400, "Message image size must not exceed 10MB"),
+    MESSAGE_IMAGE_UPLOAD_FAILED(500, "Failed to upload message image"),
+    IMAGE_MESSAGE_NOT_SUPPORTED_OVER_WEBSOCKET(400, "Image messages must be sent via multipart HTTP request"),
 
     // ===== Server errors =====
     INTERNAL_ERROR(500, "Internal server error"),
