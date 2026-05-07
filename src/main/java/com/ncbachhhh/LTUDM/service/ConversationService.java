@@ -328,4 +328,30 @@ public class ConversationService {
         }
         return authentication.getName();
     }
+
+    // Lấy conversation của user hiện tại từ token
+    @Transactional(readOnly = true)
+    public List<ConversationResponse> getMyConversations() {
+        String userId = getCurrentUserId();
+
+        // Lấy tất cả ConversationMember có user_id = userId hiện tại
+        List<ConversationMember> conversationMembers = conversationMemberRepository.findByIdUserId(userId);
+
+        // Nếu user không có conversation nào, trả về rỗng
+        if (conversationMembers.isEmpty()) {
+            return List.of();
+        }
+
+        // Lấy conversation_id từ các ConversationMember
+        List<String> conversationIds = conversationMembers.stream()
+                .map(member -> member.getId().getConversationId())
+                .distinct()
+                .toList();
+
+        // Lấy danh sách Conversation và sắp xếp theo created_at giảm dần
+        return conversationRepository.findAllById(conversationIds).stream()
+                .sorted(Comparator.comparing(Conversation::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toConversationResponse)
+                .toList();
+    }
 }

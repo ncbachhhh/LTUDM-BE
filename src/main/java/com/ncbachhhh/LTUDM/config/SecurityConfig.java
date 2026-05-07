@@ -4,6 +4,7 @@ import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,11 +26,11 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
     @NonFinal
     @Value("${jwt.secret}")
     protected String SECRET_KEY;
 
-    // Mã hóa mật khẩu
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -42,6 +43,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -50,17 +52,24 @@ public class SecurityConfig {
         return source;
     }
 
-    // Cấu hình bảo mật
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
+
+                        .requestMatchers("/ws").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+
                         .requestMatchers("/conversations/**").authenticated()
                         .requestMatchers("/users/**").authenticated()
+                        .requestMatchers("/messages/**").authenticated()
+
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -70,15 +79,16 @@ public class SecurityConfig {
                 .build();
     }
 
-    // Cấu hình cách Spring Security đọc authorities từ JWT
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix(""); // Không thêm prefix vì đã có "ROLE_" trong token
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("scope"); // Đọc từ claim "scope"
+
+        grantedAuthoritiesConverter.setAuthorityPrefix("");
+        grantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+
         return jwtAuthenticationConverter;
     }
 

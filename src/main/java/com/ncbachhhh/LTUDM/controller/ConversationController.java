@@ -10,12 +10,15 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 @RequestMapping("/conversations")
@@ -23,6 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ConversationController {
     ConversationService conversationService;
+
+    // GET /conversations/me - Lấy danh sách conversation của user hiện tại (userId từ token)
+    @GetMapping("/me")
+    ApiResponse<List<ConversationResponse>> getMyConversations() {
+        ApiResponse<List<ConversationResponse>> response = new ApiResponse<>();
+        response.setData(conversationService.getMyConversations());
+        response.setCode(ErrorCode.SUCCESS.getCode());
+        return response;
+    }
 
     // POST /conversations - Tạo đoạn chat cá nhân hoặc nhóm
     @PostMapping
