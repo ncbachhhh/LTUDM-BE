@@ -15,6 +15,9 @@ public interface UserMapper {
     @Mapping(target = "passwordHash", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "active", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "avatarUrl", ignore = true)
+    @Mapping(target = "role", ignore = true)
     User toUser(UserRegisterRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
