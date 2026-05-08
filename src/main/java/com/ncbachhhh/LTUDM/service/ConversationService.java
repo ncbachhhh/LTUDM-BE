@@ -265,7 +265,7 @@ public class ConversationService {
     private void ensureCanManageGroup(String conversationId, String userId) {
         ConversationMember member = conversationMemberRepository.findById(new ConversationMemberId(conversationId, userId))
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_CONVERSATION_MEMBER));
-        if (member.getRole() != ConversationMemberRole.OWNER && member.getRole() != ConversationMemberRole.ADMIN) {
+        if (member.getRole() != ConversationMemberRole.OWNER) {
             throw new AppException(ErrorCode.NOT_GROUP_MANAGER);
         }
     }

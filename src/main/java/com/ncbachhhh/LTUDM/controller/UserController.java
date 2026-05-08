@@ -29,7 +29,7 @@ public class UserController {
     UserService userService;
 
     @PatchMapping("/{userId}")
-    @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
+    @PreAuthorize("@userSecurity.isOwner(authentication, #userId)")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId, @RequestBody @Valid UserUpdateRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.updateUser(userId, request));
@@ -67,7 +67,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("@userSecurity.isOwner(authentication, #userId) or hasRole('ADMIN')")
+    @PreAuthorize("@userSecurity.isOwner(authentication, #userId)")
     ApiResponse<UserResponse> getUserById(@PathVariable("userId") String userId) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getUserById(userId));
