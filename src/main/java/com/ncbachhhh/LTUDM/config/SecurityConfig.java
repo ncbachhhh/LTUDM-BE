@@ -40,11 +40,24 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of("*"));
+        // 1. Dùng setAllowedOrigins thay vì Patterns khi đã tắt Credentials
+        config.setAllowedOrigins(List.of("*"));
+
+        // 2. Các methods cho phép
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+
+        // 3. Khai báo ĐÍCH DANH các header, đặc biệt là header vượt rào của Ngrok
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "ngrok-skip-browser-warning" // Quan trọng: Bắt buộc phải có để nhận request từ Ngrok
+        ));
+
+        // 4. QUAN TRỌNG: Tắt Credentials vì bạn đang dùng Bearer Token ở LocalStorage
+        config.setAllowCredentials(false);
+
         config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -69,8 +82,7 @@ public class SecurityConfig {
                         .requestMatchers("/users/**").authenticated()
                         .requestMatchers("/messages/**").authenticated()
 
-                        .anyRequest().permitAll()
-                )
+                        .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwtConfigurer -> jwtConfigurer
                                 .decoder(jwtDecoder())
