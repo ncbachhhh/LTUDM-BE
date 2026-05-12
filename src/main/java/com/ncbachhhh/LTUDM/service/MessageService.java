@@ -11,6 +11,7 @@ import com.ncbachhhh.LTUDM.entity.MessageReceipt.MessageReceipt;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.MessageMapper;
+import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
@@ -37,6 +38,7 @@ public class MessageService {
     MessageRepository messageRepository;
     MessageReceiptRepository messageReceiptRepository;
     MessageDeletionRepository messageDeletionRepository;
+    ConversationMemberRepository conversationMemberRepository;
     MessageMapper messageMapper;
     R2StorageService r2StorageService;
 
@@ -67,6 +69,7 @@ public class MessageService {
         if (!StringUtils.hasText(senderId)) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
+        ensureCanAccessConversation(request.getConversationId(), senderId);
 
         Message message = messageMapper.toMessage(request);
         message.setSenderId(senderId);
@@ -103,6 +106,8 @@ public class MessageService {
     // Lấy toàn bộ tin nhắn hiển thị được trong một conversation
     public List<MessageResponse> getMessagesByConversation(String conversationId) {
         String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
         return messageRepository.findVisibleMessagesByConversation(conversationId, userId).stream()
                 .map(message -> toMessageResponse(message, userId))
                 .toList();
@@ -111,6 +116,8 @@ public class MessageService {
     // Lấy danh sách tin nhắn có phân trang
     public Page<MessageResponse> getMessagesByConversationPaged(String conversationId, int page, int size) {
         String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
         Pageable pageable = PageRequest.of(page, size);
         Page<Message> messages = messageRepository.findVisibleMessagesByConversationPaged(conversationId, userId, pageable);
         List<MessageResponse> content = messages.getContent().stream()
@@ -124,6 +131,7 @@ public class MessageService {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
+        ensureCanAccessConversation(message.getConversationId(), userId);
 
         if (message.getSenderId().equals(userId)) {
             return;
@@ -144,6 +152,8 @@ public class MessageService {
     }
 
     public void markAllAsRead(String conversationId, String userId) {
+        ensureCanAccessConversation(conversationId, userId);
+
         List<Message> messages = messageRepository.findVisibleMessagesByConversation(conversationId, userId);
 
         List<MessageReceipt> newReceipts = messages.stream()
@@ -165,8 +175,9 @@ public class MessageService {
     // Xóa mềm tin nhắn cho riêng user hiện tại
     public void deleteMessage(String messageId) {
         String userId = getCurrentUserId();
-        messageRepository.findById(messageId)
+        Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
+        ensureCanAccessConversation(message.getConversationId(), userId);
 
         MessageDeletionId deletionId = new MessageDeletionId(messageId, userId);
         if (!messageDeletionRepository.existsById(deletionId)) {
@@ -179,12 +190,17 @@ public class MessageService {
 
     // Đếm số tin nhắn chưa đọc trong conversation
     public long countUnreadMessages(String conversationId) {
-        return messageRepository.countUnreadMessages(conversationId, getCurrentUserId());
+        String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
+        return messageRepository.countUnreadMessages(conversationId, userId);
     }
 
     // Lấy tin nhắn mới nhất còn hiển thị với user hiện tại
     public MessageResponse getLatestMessage(String conversationId) {
         String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
         Page<Message> page = messageRepository.findVisibleMessagesByConversationPaged(conversationId, userId, PageRequest.of(0, 1));
         if (page.isEmpty()) {
             return null;
@@ -197,5 +213,15 @@ public class MessageService {
         MessageResponse response = messageMapper.toMessageResponse(message);
         response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));
         return response;
+    }
+
+    public void ensureCanAccessConversation(String conversationId, String userId) {
+        if (!StringUtils.hasText(conversationId) || !StringUtils.hasText(userId)) {
+            throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
+        }
+
+        if (!conversationMemberRepository.existsByIdConversationIdAndIdUserId(conversationId, userId)) {
+            throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
+        }
     }
 }

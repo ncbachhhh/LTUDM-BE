@@ -39,24 +39,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // 1. Dùng setAllowedOrigins thay vì Patterns khi đã tắt Credentials
         config.setAllowedOrigins(List.of("*"));
-
-        // 2. Các methods cho phép
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-        // 3. Khai báo ĐÍCH DANH các header, đặc biệt là header vượt rào của Ngrok
         config.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
-                "Accept",
-                "ngrok-skip-browser-warning" // Quan trọng: Bắt buộc phải có để nhận request từ Ngrok
+                "Accept"
         ));
-
-        // 4. QUAN TRỌNG: Tắt Credentials vì bạn đang dùng Bearer Token ở LocalStorage
         config.setAllowCredentials(false);
-
         config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

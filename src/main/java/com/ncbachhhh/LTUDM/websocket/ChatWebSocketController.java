@@ -43,7 +43,8 @@ public class ChatWebSocketController {
 
     @MessageMapping("/chat/{conversationId}/read")
     public void markAsRead(@DestinationVariable String conversationId, Principal principal) {
-        messageService.markAllAsRead(conversationId, requireUserId(principal));
+        String userId = requireUserId(principal);
+        messageService.markAllAsRead(conversationId, userId);
         messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", "Messages marked as read");
     }
 
@@ -53,6 +54,8 @@ public class ChatWebSocketController {
             @Payload TypingIndicator indicator,
             Principal principal) {
         String userId = requireUserId(principal);
+        messageService.ensureCanAccessConversation(conversationId, userId);
+
         TypingIndicator sanitizedIndicator = new TypingIndicator(
                 userId,
                 StringUtils.hasText(indicator.displayName()) ? indicator.displayName() : null,
