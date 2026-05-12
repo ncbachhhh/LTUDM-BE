@@ -166,6 +166,29 @@ LOCK TABLES `friendships` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `invalidated_tokens`
+--
+
+DROP TABLE IF EXISTS `invalidated_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invalidated_tokens` (
+  `id` varchar(255) NOT NULL,
+  `expiry_time` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invalidated_tokens`
+--
+
+LOCK TABLES `invalidated_tokens` WRITE;
+/*!40000 ALTER TABLE `invalidated_tokens` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invalidated_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `message_deletions`
 --
 

@@ -1,10 +1,13 @@
 package com.ncbachhhh.LTUDM.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+import java.util.List;
 
 /**
  * Cấu hình WebSocket với STOMP protocol cho realtime chat.
@@ -12,6 +15,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}")
+    private List<String> allowedOrigins;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -33,7 +39,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Endpoint để client kết nối WebSocket
         // URL: ws://localhost:8080/ws
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-                .withSockJS(); // Cho phep dung ca native WebSocket va SockJS fallback
+                .setAllowedOrigins(allowedOrigins.toArray(String[]::new))
+                .withSockJS()
+                .setSessionCookieNeeded(false); // JWT auth does not need SockJS cookies/credentials.
     }
 }
