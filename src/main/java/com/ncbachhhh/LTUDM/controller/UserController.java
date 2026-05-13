@@ -60,7 +60,7 @@ public class UserController {
     ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
         ApiResponse<String> response = new ApiResponse<>();
         userService.changePassword(request);
-        response.setData("Password changed successfully");
+        response.setData("Đổi mật khẩu thành công.");
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

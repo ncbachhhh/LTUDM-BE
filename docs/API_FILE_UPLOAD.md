@@ -1,21 +1,27 @@
-# API Documentation - File Upload
+# Tài Liệu API - File Upload
 
-Base URL: `http://localhost:8080/api/v1`
+Base URL:
 
-## 1. Tong quan
+```text
+http://localhost:8080/api/v1
+```
 
-Backend hien dung Cloudflare R2 de luu file upload.
+## 1. Tổng quan
 
-Thiet ke hien tai chia lam 2 lop:
-- `R2StorageService.uploadFile(...)`: ham upload file dung chung cho nhieu nghiep vu
-- `R2StorageService.uploadAvatar(...)`: wrapper cho avatar, goi lai ham upload chung voi rule rieng
+Backend hiện dùng Cloudflare R2 để lưu file upload.
 
-Muc tieu cua cach tach nay la:
-- khong lap lai logic validate file
-- khong lap lai logic generate object key
-- de mo rong sang anh chat, file dinh kem, tai lieu
+Thiết kế hiện tại chia thành 2 lớp:
 
-## 2. Cau hinh moi truong
+- `R2StorageService.uploadFile(...)`: hàm upload file dùng chung cho nhiều nghiệp vụ.
+- `R2StorageService.uploadAvatar(...)`: wrapper cho avatar, gọi lại hàm upload chung với rule riêng.
+
+Mục tiêu của cách tách này:
+
+- Không lặp lại logic validate file.
+- Không lặp lại logic generate object key.
+- Dễ mở rộng sang ảnh chat, file đính kèm hoặc tài liệu.
+
+## 2. Cấu hình môi trường
 
 Các biến môi trường cần có:
 
@@ -27,13 +33,14 @@ R2_SECRET_KEY=<secret-key>
 R2_PUBLIC_BASE_URL=https://<public-domain>
 ```
 
-Ghi chu:
-- `R2_ENDPOINT` la S3 endpoint cua Cloudflare R2
-- `R2_BUCKET` la bucket luu file
-- `R2_PUBLIC_BASE_URL` nen la domain public de frontend co the truy cap truc tiep anh/file
-- neu khong set `R2_PUBLIC_BASE_URL`, backend se fallback sang URL dang `endpoint/bucket/object-key`, URL nay thuong khong phu hop de public truc tiep
+Ghi chú:
 
-## 3. Cau hinh multipart
+- `R2_ENDPOINT` là S3 endpoint của Cloudflare R2.
+- `R2_BUCKET` là bucket lưu file.
+- `R2_PUBLIC_BASE_URL` nên là domain public để frontend truy cập trực tiếp ảnh/file.
+- Nếu không set `R2_PUBLIC_BASE_URL`, backend sẽ fallback sang URL dạng `endpoint/bucket/object-key`, thường không phù hợp để public trực tiếp.
+
+## 3. Cấu hình multipart
 
 Trong `application.yaml`:
 
@@ -45,13 +52,13 @@ spring:
       max-request-size: 5MB
 ```
 
-Hien tai gioi han global dang la `5MB`.
+Giới hạn global hiện tại là `5MB`.
 
 ## 4. Cách upload file trong code
 
-### 4.1 Ham upload dung chung
+### 4.1 Hàm upload dùng chung
 
-`R2StorageService` da co ham:
+`R2StorageService` đã có hàm:
 
 ```java
 public String uploadFile(
@@ -66,22 +73,24 @@ public String uploadFile(
 )
 ```
 
-Y nghia tham so:
-- `folder`: thu muc logical trong bucket, vi du `avatars/{userId}` hoac `messages/{conversationId}`
-- `file`: file nhan tu multipart request
-- `allowedContentTypes`: danh sach MIME type duoc phep
-- `maxFileSizeBytes`: dung luong toi da
-- cac `ErrorCode`: rule loi theo tung nghiep vu
+Ý nghĩa tham số:
 
-Ham nay se:
-1. validate file rong
-2. validate MIME type
-3. validate dung luong
-4. tao object key ngau nhien
-5. upload file len Cloudflare R2
-6. tra ve public URL cua file
+- `folder`: thư mục logical trong bucket, ví dụ `avatars/{userId}` hoặc `messages/{conversationId}`.
+- `file`: file nhận từ multipart request.
+- `allowedContentTypes`: danh sách MIME type được phép.
+- `maxFileSizeBytes`: dung lượng tối đa.
+- Các `ErrorCode`: rule lỗi theo từng nghiệp vụ.
 
-### 4.2 Vi du dung cho anh chat sau nay
+Hàm này sẽ:
+
+1. Validate file rỗng.
+2. Validate MIME type.
+3. Validate dung lượng.
+4. Tạo object key ngẫu nhiên.
+5. Upload file lên Cloudflare R2.
+6. Trả về public URL của file.
+
+### 4.2 Ví dụ dùng cho ảnh chat sau này
 
 ```java
 String imageUrl = r2StorageService.uploadFile(
@@ -96,48 +105,52 @@ String imageUrl = r2StorageService.uploadFile(
 );
 ```
 
-Neu sau nay ho tro nhieu loai file hon, co the tao them cac tap MIME type rieng nhu:
+Nếu sau này hỗ trợ nhiều loại file hơn, có thể tạo thêm các tập MIME type riêng:
+
 - `IMAGE_CONTENT_TYPES`
 - `DOCUMENT_CONTENT_TYPES`
 - `MEDIA_CONTENT_TYPES`
 
-## 5. Quy uoc object key
+## 5. Quy ước object key
 
-Object key hien duoc tao theo dang:
+Object key hiện được tạo theo dạng:
 
 ```text
 {folder}/{uuid}.{extension}
 ```
 
-Vi du:
+Ví dụ:
 
 ```text
 avatars/9b5d8d30-7d23-4f5f-b4aa-497af89d9131/3caa6e1f-4f77-44af-95d8-c2f5a7db0db0.png
 ```
 
-Loi ich:
-- tranh trung ten file
-- khong phu thuoc ten file nguoi dung upload
-- de phan tach file theo nghiep vu
+Lợi ích:
 
-## 6. MIME type anh dang ho tro
+- Tránh trùng tên file.
+- Không phụ thuộc tên file người dùng upload.
+- Dễ phân tách file theo nghiệp vụ.
 
-Hien tai `R2StorageService` cho phep cac loai anh:
+## 6. MIME type ảnh đang hỗ trợ
+
+Hiện tại `R2StorageService` cho phép các loại ảnh:
+
 - `image/jpeg`
 - `image/png`
 - `image/gif`
 - `image/webp`
 
-## 7. Luu y khi mo rong
+## 7. Lưu ý khi mở rộng
 
-- Khong nen dua rule nghiep vu vao controller
-- Nen de controller chi nhan `MultipartFile`, con service quyet dinh rule validate
-- Nen tao wrapper rieng theo use case nhu `uploadAvatar`, `uploadMessageImage`, `uploadAttachment`
-- Neu can xoa file cu, nen bo sung them ham `deleteFile(objectKey)` trong `R2StorageService`
+- Không nên đưa rule nghiệp vụ vào controller.
+- Nên để controller chỉ nhận `MultipartFile`, còn service quyết định rule validate.
+- Nên tạo wrapper riêng theo use case như `uploadAvatar`, `uploadMessageImage`, `uploadAttachment`.
+- Nếu cần xóa file cũ, nên bổ sung thêm hàm `deleteFile(objectKey)` trong `R2StorageService`.
 
-## 8. Huong dan upload avatar
+## 8. Hướng dẫn upload avatar
 
-Avatar hien la use case dau tien dang dung co che upload file chung.
+Avatar hiện là use case đầu tiên đang dùng cơ chế upload file chung.
 
-Chi tiet endpoint va cach goi xem o:
+Chi tiết endpoint và cách gọi xem tại:
+
 - [API_USER.md](./API_USER.md)

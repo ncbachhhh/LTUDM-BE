@@ -1,16 +1,21 @@
 package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.AuthenticationRequest;
+import com.ncbachhhh.LTUDM.dto.request.ForgotPasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.IntrospectRequest;
 import com.ncbachhhh.LTUDM.dto.request.LogoutRequest;
 import com.ncbachhhh.LTUDM.dto.request.RefreshTokenRequest;
+import com.ncbachhhh.LTUDM.dto.request.ResetPasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
+import com.ncbachhhh.LTUDM.dto.request.VerifyResetOtpRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.AuthenticationResponse;
 import com.ncbachhhh.LTUDM.dto.response.IntrospectResponse;
+import com.ncbachhhh.LTUDM.dto.response.ResetOtpVerificationResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.AuthenticationService;
+import com.ncbachhhh.LTUDM.service.PasswordResetService;
 import com.ncbachhhh.LTUDM.service.UserService;
 import com.nimbusds.jose.JOSEException;
 import jakarta.validation.Valid;
@@ -30,6 +35,7 @@ import java.text.ParseException;
 public class AuthenticationController {
     AuthenticationService authenticationService;
     UserService userService;
+    PasswordResetService passwordResetService;
 
     // Đăng ký tài khoản mới
     // POST /auth/register - Đăng ký tài khoản mới
@@ -73,7 +79,7 @@ public class AuthenticationController {
         authenticationService.logout(request);
         return ApiResponse.<Void>builder()
                 .code(200)
-                .message("Logged out successfully")
+                .message("Đăng xuất thành công.")
                 .build();
     }
 
@@ -86,6 +92,34 @@ public class AuthenticationController {
         return ApiResponse.<IntrospectResponse>builder()
                 .code(200)
                 .data(result)
+                .build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        passwordResetService.forgotPassword(request.getEmail());
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Nếu email tồn tại, mã OTP đã được gửi.")
+                .build();
+    }
+
+    @PostMapping("/verify-reset-otp")
+    public ApiResponse<ResetOtpVerificationResponse> verifyResetOtp(@RequestBody @Valid VerifyResetOtpRequest request) {
+        var result = passwordResetService.verifyResetOtp(request.getEmail(), request.getOtp());
+        return ApiResponse.<ResetOtpVerificationResponse>builder()
+                .code(200)
+                .message("Xác thực OTP thành công.")
+                .data(result)
+                .build();
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.getResetToken(), request.getNewPassword());
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Đổi mật khẩu thành công.")
                 .build();
     }
 

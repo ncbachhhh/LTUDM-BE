@@ -1,15 +1,21 @@
-# API Documentation - User Module
+# Tài Liệu API - User Module
 
-Base URL: `http://localhost:8080/api/v1`
+Base URL:
 
-## 1. Authentication APIs
+```text
+http://localhost:8080/api/v1
+```
 
-### 1.1 Dang ky
+## 1. API xác thực
+
+### 1.1 Đăng ký
+
 ```http
 POST /auth/register
 ```
 
 Request:
+
 ```json
 {
   "email": "user@example.com",
@@ -21,6 +27,7 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -37,12 +44,14 @@ Response:
 }
 ```
 
-### 1.2 Dang nhap
+### 1.2 Đăng nhập
+
 ```http
 POST /auth/login
 ```
 
 Request:
+
 ```json
 {
   "email": "user@example.com",
@@ -51,6 +60,7 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -62,48 +72,56 @@ Response:
 }
 ```
 
-### 1.3 Refresh token
+### 1.3 Làm mới token
+
 ```http
 POST /auth/refresh
 ```
 
-### 1.4 Logout
+### 1.4 Đăng xuất
+
 ```http
 POST /auth/logout
 ```
 
-### 1.5 Kiem tra token
+### 1.5 Kiểm tra token
+
 ```http
 POST /auth/introspect
 ```
 
-## 2. User APIs
+## 2. API người dùng
 
-Header bat buoc:
+Header bắt buộc:
+
 ```http
 Authorization: Bearer {accessToken}
 ```
 
-### 2.1 Lay thong tin ca nhan
+### 2.1 Lấy thông tin cá nhân
+
 ```http
 GET /users/me
 ```
 
-### 2.2 Lay thong tin user theo ID
+### 2.2 Lấy thông tin user theo ID
+
 ```http
 GET /users/{userId}
 ```
 
-Chi chinh chu hoac admin moi truy cap duoc.
+Chỉ chính chủ hoặc admin mới truy cập được.
 
-### 2.3 Cap nhat thong tin user
+### 2.3 Cập nhật thông tin user
+
 ```http
 PATCH /users/{userId}
 ```
 
-Chi chinh chu hoac admin moi cap nhat duoc.
+Chỉ chính chủ hoặc admin mới cập nhật được.
 
 Request:
+
 ```json
 {
   "display_name": "New Name",
@@ -111,12 +129,14 @@ Request:
 }
 ```
 
-### 2.4 Doi mat khau
+### 2.4 Đổi mật khẩu
+
 ```http
 POST /users/me/change-password
 ```
 
 Request:
+
 ```json
 {
   "old_password": "oldPassword123",
@@ -126,19 +146,22 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
-  "data": "Password changed successfully"
+  "data": "Đổi mật khẩu thành công."
 }
 ```
 
 ### 2.5 Upload avatar
+
 ```http
 PATCH /users/me/avatar
 ```
 
-Header bat buoc:
+Header bắt buộc:
+
 ```http
 Authorization: Bearer {accessToken}
 Content-Type: multipart/form-data
@@ -146,16 +169,17 @@ Content-Type: multipart/form-data
 
 Form data:
 
-| Field | Type | Required | Description |
-|------|------|----------|-------------|
-| `file` | File | Yes | Anh avatar can upload |
+| Field | Type | Bắt buộc | Mô tả |
+|------|------|----------|------|
+| `file` | File | Có | Ảnh avatar cần upload |
 
-Rule hien tai:
-- Chi ho tro `image/jpeg`, `image/png`, `image/gif`, `image/webp`
-- Kich thuoc toi da `5MB`
-- User phai dang nhap
+Quy tắc hiện tại:
 
-Vi du `curl`:
+- Chỉ hỗ trợ `image/jpeg`, `image/png`, `image/gif`, `image/webp`.
+- Kích thước tối đa `5MB`.
+- User phải đăng nhập.
+
+Ví dụ `curl`:
 
 ```bash
 curl --request PATCH "http://localhost:8080/api/v1/users/me/avatar" \
@@ -164,6 +188,7 @@ curl --request PATCH "http://localhost:8080/api/v1/users/me/avatar" \
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -180,47 +205,49 @@ Response:
 }
 ```
 
-Loi co the gap:
+Lỗi có thể gặp:
 
 | HTTP | Code | Message |
 |------|------|---------|
-| 400 | 400 | Avatar file is required |
-| 400 | 400 | Avatar must be a JPG, PNG, GIF, or WEBP image |
-| 400 | 400 | Avatar file size must not exceed 5MB |
-| 401 | 401 | Unauthenticated |
-| 500 | 500 | Failed to upload avatar |
+| 400 | 400 | Vui lòng chọn file avatar |
+| 400 | 400 | Avatar phải là ảnh JPG, PNG, GIF hoặc WEBP |
+| 400 | 400 | Dung lượng avatar không được vượt quá 5MB |
+| 401 | 401 | Chưa đăng nhập |
+| 500 | 500 | Upload avatar thất bại |
 
-Ghi chu:
-- File duoc upload len Cloudflare R2
-- Sau khi upload thanh cong, `avatar_url` trong bang `users` se duoc cap nhat
-- URL tra ve nen dung `R2_PUBLIC_BASE_URL` de frontend truy cap truc tiep
+Ghi chú:
 
-## 3. Admin APIs
+- File được upload lên Cloudflare R2.
+- Sau khi upload thành công, `avatar_url` trong bảng `users` sẽ được cập nhật.
+- URL trả về nên dùng `R2_PUBLIC_BASE_URL` để frontend truy cập trực tiếp.
 
-Các API admin hien da bi disable trong source code.
+## 3. API admin
 
-Các endpoint duoi day chi con mang tinh tham chieu lich su va hien khong active:
+Các API admin hiện đã bị disable trong source code.
+
+Các endpoint dưới đây chỉ còn mang tính tham chiếu lịch sử và hiện không active:
+
 - `POST /admin/users`
 - `PUT /admin/users/{userId}/ban`
 - `PUT /admin/users/{userId}/unban`
 
-Neu bat lai `AdminController`, can cap nhat tai lieu nay dong bo voi implementation thuc te.
+Nếu bật lại `AdminController`, cần cập nhật tài liệu này đồng bộ với implementation thực tế.
 
-## Error codes
+## Mã lỗi
 
 | Code | Message |
 |------|---------|
-| 400 | Email/Username already exists |
-| 400 | Validation failed |
-| 400 | Avatar file is required / invalid type / too large |
-| 401 | Unauthenticated / Wrong password |
-| 403 | Access denied / User banned |
-| 404 | User not found |
-| 500 | Internal server error / Failed to upload avatar |
+| 400 | Email đã tồn tại / Username đã tồn tại |
+| 400 | Dữ liệu không hợp lệ |
+| 400 | Vui lòng chọn file avatar / Loại file không hợp lệ / File quá lớn |
+| 401 | Chưa đăng nhập / Email hoặc mật khẩu không đúng |
+| 403 | Không có quyền truy cập / Tài khoản đã bị khóa |
+| 404 | Không tìm thấy người dùng |
+| 500 | Lỗi máy chủ / Upload avatar thất bại |
 
-## Ghi chu
+## Ghi chú
 
-- Response user hien van tra JSON theo snake_case: `display_name`, `avatar_url`, `created_at`, `is_active`.
-- `username` toi da 50 ky tu.
-- `display_name` toi da 100 ky tu.
-- Upload avatar hien dung `multipart/form-data`, khong gui JSON body.
+- Response user hiện vẫn trả JSON theo snake_case: `display_name`, `avatar_url`, `created_at`, `is_active`.
+- `username` tối đa 50 ký tự.
+- `display_name` tối đa 100 ký tự.
+- Upload avatar hiện dùng `multipart/form-data`, không gửi JSON body.

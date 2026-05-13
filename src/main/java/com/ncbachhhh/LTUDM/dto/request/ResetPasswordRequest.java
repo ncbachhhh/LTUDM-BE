@@ -8,23 +8,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-/**
- * DTO request cho việc đổi mật khẩu.
- * Yêu cầu mật khẩu cũ để xác thực và mật khẩu mới + confirm.
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class ChangePasswordRequest {
-    @NotBlank(message = "OLD_PASSWORD_REQUIRED")
-    String old_password;
+public class ResetPasswordRequest {
+    @NotBlank(message = "INVALID_RESET_TOKEN")
+    String resetToken;
 
-    @NotBlank(message = "NEW_PASSWORD_REQUIRED")
+    @NotBlank(message = "INVALID_PASSWORD_FORMAT")
     @Size(min = 8, message = "INVALID_PASSWORD_FORMAT")
-    String new_password;
-
-    @NotBlank(message = "CONFIRM_PASSWORD_REQUIRED")
-    String confirm_password;
+    String newPassword;
 }

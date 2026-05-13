@@ -73,7 +73,7 @@ public class MessageController {
     ApiResponse<String> markAsRead(@PathVariable String messageId) {
         ApiResponse<String> response = new ApiResponse<>();
         messageService.markAsRead(messageId);
-        response.setData("Message marked as read");
+        response.setData("Đã đánh dấu tin nhắn là đã đọc.");
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }
@@ -83,7 +83,7 @@ public class MessageController {
     ApiResponse<String> markAllAsRead(@PathVariable String conversationId) {
         ApiResponse<String> response = new ApiResponse<>();
         messageService.markAllAsRead(conversationId);
-        response.setData("All messages marked as read");
+        response.setData("Đã đánh dấu toàn bộ tin nhắn là đã đọc.");
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }
@@ -93,7 +93,7 @@ public class MessageController {
     ApiResponse<String> deleteMessage(@PathVariable String messageId) {
         ApiResponse<String> response = new ApiResponse<>();
         messageService.deleteMessage(messageId);
-        response.setData("Message deleted");
+        response.setData("Đã xóa tin nhắn.");
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }

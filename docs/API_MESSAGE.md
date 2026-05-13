@@ -1,40 +1,49 @@
-# API Message
+# Tài Liệu API - Message
 
-Base URL: `/api/v1/messages`
+Base URL:
 
-## Endpoints
+```text
+http://localhost:8080/api/v1
+```
 
-### 1. Gui tin nhan
+## Endpoint
+
+### 1. Gửi tin nhắn
+
 ```http
 POST /messages
 ```
 
 Request body cho `TEXT` (`application/json`):
+
 ```json
 {
   "conversation_id": "uuid-conversation",
-  "content": "Noi dung tin nhan",
+  "content": "Nội dung tin nhắn",
   "type": "TEXT"
 }
 ```
 
-Gui `IMAGE` qua `multipart/form-data`:
+Gửi `IMAGE` qua `multipart/form-data`:
 
-- Part `message`
+Part `message`:
+
 ```json
 {
   "conversation_id": "uuid-conversation",
   "type": "IMAGE"
 }
 ```
-- Part `file`: file anh thuc te (`image/jpeg`, `image/png`, `image/gif`, `image/webp`)
 
-`type` hien ho tro: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+Part `file`: file ảnh thực tế (`image/jpeg`, `image/png`, `image/gif`, `image/webp`).
 
-Voi `IMAGE`, backend se upload file len cloud va luu URL vao `content`.
-Sau khi luu thanh cong, backend cung broadcast realtime message moi len topic `/topic/conversation/{conversation_id}`.
+`type` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+
+Với `IMAGE`, backend sẽ upload file lên cloud và lưu URL vào `content`.
+Sau khi lưu thành công, backend cũng broadcast realtime message mới lên topic `/topic/conversation/{conversation_id}`.
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -43,7 +52,7 @@ Response:
     "conversation_id": "uuid-conversation",
     "sender_id": "uuid-sender",
     "type": "TEXT",
-    "content": "Noi dung tin nhan",
+    "content": "Nội dung tin nhắn",
     "created_at": "2026-03-12T10:30:00",
     "is_read": false,
     "is_edited": false,
@@ -55,12 +64,14 @@ Response:
 }
 ```
 
-### 2. Lay tin nhan trong conversation
+### 2. Lấy tin nhắn trong conversation
+
 ```http
 GET /messages/conversation/{conversationId}
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -70,7 +81,7 @@ Response:
       "conversation_id": "uuid-conversation",
       "sender_id": "uuid-sender",
       "type": "TEXT",
-      "content": "Tin nhan 1",
+      "content": "Tin nhắn 1",
       "created_at": "2026-03-12T10:30:00",
       "is_read": true,
       "is_edited": false,
@@ -83,65 +94,76 @@ Response:
 }
 ```
 
-### 3. Lay tin nhan voi phan trang
+### 3. Lấy tin nhắn với phân trang
+
 ```http
 GET /messages/conversation/{conversationId}/paged?page=0&size=20
 ```
 
 Query parameters:
-- `page`: so trang, mac dinh `0`
-- `size`: so ban ghi, mac dinh `20`
 
-### 4. Danh dau mot tin nhan da doc
+- `page`: số trang, mặc định `0`.
+- `size`: số bản ghi, mặc định `20`.
+
+### 4. Đánh dấu một tin nhắn đã đọc
+
 ```http
 PUT /messages/{messageId}/read
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
-  "data": "Message marked as read"
+  "data": "Đã đánh dấu tin nhắn là đã đọc."
 }
 ```
 
-### 5. Danh dau toan bo tin nhan trong conversation da doc
+### 5. Đánh dấu toàn bộ tin nhắn trong conversation đã đọc
+
 ```http
 PUT /messages/conversation/{conversationId}/read-all
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
-  "data": "All messages marked as read"
+  "data": "Đã đánh dấu toàn bộ tin nhắn là đã đọc."
 }
 ```
 
-### 6. Xoa tin nhan phia ca nhan
+### 6. Xóa tin nhắn phía cá nhân
+
 ```http
 DELETE /messages/{messageId}
 ```
 
-Luu y:
-- Day la xoa phia ca nhan, duoc luu qua bang `message_deletions`.
-- Ban ghi trong `messages` khong bi xoa cung.
-- Tin nhan da xoa voi user hien tai se khong con xuat hien trong danh sach cua user do.
+Lưu ý:
+
+- Đây là xóa phía cá nhân, được lưu qua bảng `message_deletions`.
+- Bản ghi trong `messages` không bị xóa cứng.
+- Tin nhắn đã xóa với user hiện tại sẽ không còn xuất hiện trong danh sách của user đó.
 
 Response:
+
 ```json
 {
   "code": 200,
-  "data": "Message deleted"
+  "data": "Đã xóa tin nhắn."
 }
 ```
 
-### 7. Dem so tin nhan chua doc
+### 7. Đếm số tin nhắn chưa đọc
+
 ```http
 GET /messages/conversation/{conversationId}/unread-count
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -149,12 +171,14 @@ Response:
 }
 ```
 
-### 8. Lay tin nhan moi nhat
+### 8. Lấy tin nhắn mới nhất
+
 ```http
 GET /messages/conversation/{conversationId}/latest
 ```
 
 Response:
+
 ```json
 {
   "code": 200,
@@ -163,7 +187,7 @@ Response:
     "conversation_id": "uuid-conversation",
     "sender_id": "uuid-sender",
     "type": "TEXT",
-    "content": "Tin nhan moi nhat",
+    "content": "Tin nhắn mới nhất",
     "created_at": "2026-03-12T10:35:00",
     "is_read": false,
     "is_edited": false,
@@ -175,20 +199,20 @@ Response:
 }
 ```
 
-## Ghi chu nghiep vu
+## Ghi chú nghiệp vụ
 
-- `is_read` trong response duoc suy ra tu bang `message_receipts`, khong nam truc tiep tren bang `messages`.
-- Xoa tin nhan phia ca nhan duoc luu o bang `message_deletions`.
-- Schema hien co san cac cot recall/edit tren `messages`, nhung tai lieu nay moi phan anh trang thai response hien tai cua backend.
+- `is_read` trong response được suy ra từ bảng `message_receipts`, không nằm trực tiếp trên bảng `messages`.
+- Xóa tin nhắn phía cá nhân được lưu ở bảng `message_deletions`.
+- Schema hiện có sẵn các cột recall/edit trên `messages`, nhưng tài liệu này mới phản ánh trạng thái response hiện tại của backend.
 
-## Error codes
+## Mã lỗi
 
 | Code | Message |
 |------|---------|
-| 400 | Message content cannot be empty |
-| 400 | Image message requires an image file |
-| 400 | Message image must be a JPG, PNG, GIF, or WEBP image |
-| 400 | Message image size must not exceed 10MB |
-| 404 | Message not found |
-| 404 | Conversation not found |
-| 403 | You are not a member of this conversation |
+| 400 | Nội dung tin nhắn không được để trống |
+| 400 | Tin nhắn ảnh cần có file ảnh |
+| 400 | Ảnh tin nhắn phải là JPG, PNG, GIF hoặc WEBP |
+| 400 | Dung lượng ảnh tin nhắn không được vượt quá 10MB |
+| 404 | Không tìm thấy tin nhắn |
+| 404 | Không tìm thấy đoạn chat |
+| 403 | Bạn không phải thành viên của đoạn chat này |

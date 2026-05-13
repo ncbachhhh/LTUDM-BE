@@ -1,39 +1,42 @@
-# LTUDM Backend Documentation
+# Tài Liệu LTUDM Backend
 
-Last updated: 2026-04-18
+Cập nhật lần cuối: 2026-05-13
 
-## Tai lieu
+## Danh sách tài liệu
 
-| File | Mo ta |
-|------|-------|
-| [API_USER.md](./API_USER.md) | API cho authentication, user va upload avatar |
-| [API_FILE_UPLOAD.md](./API_FILE_UPLOAD.md) | Co che upload file len Cloudflare R2 va cach tai su dung trong code |
-| [API_MESSAGE.md](./API_MESSAGE.md) | API cho message |
-| [API_CONVERSATION.md](./API_CONVERSATION.md) | API cho tao va quan ly doan chat |
+| File | Mô tả |
+|------|------|
+| [API_USER.md](./API_USER.md) | API xác thực, user và upload avatar |
+| [API_FORGOT_PASSWORD.md](./API_FORGOT_PASSWORD.md) | API quên mật khẩu bằng OTP qua email |
+| [API_FILE_UPLOAD.md](./API_FILE_UPLOAD.md) | Cơ chế upload file lên Cloudflare R2 và cách tái sử dụng trong code |
+| [API_MESSAGE.md](./API_MESSAGE.md) | API tin nhắn |
+| [API_CONVERSATION.md](./API_CONVERSATION.md) | API tạo và quản lý đoạn chat |
 | [API_WEBSOCKET.md](./API_WEBSOCKET.md) | WebSocket cho realtime chat |
+| [CHAT_STEP_BY_STEP.md](./CHAT_STEP_BY_STEP.md) | Hướng dẫn test luồng chat cơ bản từng bước |
 
-## Ghi chu trang thai hien tai
+## Ghi chú trạng thái hiện tại
 
-- `AdminController` van ton tai trong code nhung toan bo endpoint admin da bi comment out.
-- JSON request/response dang dung snake_case o lop DTO.
-- Message read status duoc suy ra tu `message_receipts`.
-- Message delete phia ca nhan duoc luu o `message_deletions`.
-- `MessageType` hien ho tro: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
-- Upload avatar dang dung Cloudflare R2 thong qua `R2StorageService`.
+- `AdminController` vẫn tồn tại trong code nhưng toàn bộ endpoint admin đã bị comment out.
+- JSON request/response đang dùng snake_case ở lớp DTO.
+- Message read status được suy ra từ `message_receipts`.
+- Message delete phía cá nhân được lưu ở `message_deletions`.
+- `MessageType` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+- Upload avatar đang dùng Cloudflare R2 thông qua `R2StorageService`.
+- Quên mật khẩu dùng OTP gửi qua email và Redis để lưu OTP, cooldown, attempts, reset token.
 
-## Authorization rules
+## Quy tắc phân quyền
 
-| Endpoint | Role required | Additional check |
-|----------|---------------|------------------|
+| Endpoint | Quyền yêu cầu | Kiểm tra thêm |
+|----------|---------------|---------------|
 | `POST /auth/*` | Public | - |
-| `GET /users/me` | Authenticated | - |
-| `GET /users/{userId}` | Authenticated | Owner hoac Admin |
-| `PATCH /users/{userId}` | Authenticated | Owner hoac Admin |
-| `PATCH /users/me/avatar` | Authenticated | - |
-| `POST /users/me/change-password` | Authenticated | - |
-| `/admin/*` | Disabled | Cac endpoint hien khong active |
+| `GET /users/me` | Đã đăng nhập | - |
+| `GET /users/{userId}` | Đã đăng nhập | Chính chủ hoặc admin |
+| `PATCH /users/{userId}` | Đã đăng nhập | Chính chủ hoặc admin |
+| `PATCH /users/me/avatar` | Đã đăng nhập | - |
+| `POST /users/me/change-password` | Đã đăng nhập | - |
+| `/admin/*` | Đã tắt | Các endpoint hiện không active |
 
-## Database notes
+## Ghi chú database
 
 ### users
 

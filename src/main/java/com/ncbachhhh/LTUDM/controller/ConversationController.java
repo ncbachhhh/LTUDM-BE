@@ -61,7 +61,7 @@ public class ConversationController {
     ApiResponse<String> deleteGroupConversation(@PathVariable String conversationId) {
         ApiResponse<String> response = new ApiResponse<>();
         conversationService.deleteGroupConversation(conversationId);
-        response.setData("Group conversation deleted");
+        response.setData("Đã xóa nhóm chat.");
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }

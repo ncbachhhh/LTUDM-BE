@@ -1,35 +1,38 @@
 # Hướng Dẫn Chat Cơ Bản Từng Bước
 
-Tài liệu này mô tả cách dùng backend hiện tại để chat cơ bản:
-- đăng ký hoặc đăng nhập
-- tạo đoạn chat cá nhân hoặc nhóm
-- gửi tin nhắn
-- lấy lịch sử tin nhắn
-- đánh dấu đã đọc
-- thêm thành viên vào nhóm
-- xóa nhóm chat
+Tài liệu này mô tả cách dùng backend hiện tại để test luồng chat cơ bản:
+
+- Đăng ký hoặc đăng nhập.
+- Tạo đoạn chat cá nhân hoặc nhóm.
+- Gửi tin nhắn.
+- Lấy lịch sử tin nhắn.
+- Đánh dấu đã đọc.
+- Thêm thành viên vào nhóm.
+- Xóa nhóm chat.
 
 ## 1. Điều kiện cần
 
 - Backend đang chạy thành công.
-- Bạn có ít nhất 2 tài khoản để test chat cá nhân.
-- Mọi API chat cần `Authorization: Bearer <access_token>`.
+- Có ít nhất 2 tài khoản để test chat cá nhân.
+- Mọi API chat cần header `Authorization: Bearer <access_token>`.
 
-Lưu ý về URL:
-- Trong code hiện tại, controller map trực tiếp như `/auth`, `/users`, `/messages`, `/conversations`.
-- Nếu project của bạn đang cấu hình prefix ở gateway hoặc reverse proxy, hãy thêm prefix tương ứng, ví dụ `/api/v1`.
+Base URL mặc định:
+
+```text
+http://localhost:8080/api/v1
+```
 
 ## 2. Luồng sử dụng chuẩn
 
 ### Bước 1: Đăng ký tài khoản
 
-API:
 ```http
 POST /auth/register
 Content-Type: application/json
 ```
 
 Body:
+
 ```json
 {
   "email": "user1@example.com",
@@ -40,18 +43,19 @@ Body:
 ```
 
 Làm tương tự để tạo thêm:
+
 - `user2@example.com`
 - `user3@example.com`
 
 ### Bước 2: Đăng nhập để lấy token
 
-API:
 ```http
 POST /auth/login
 Content-Type: application/json
 ```
 
 Body:
+
 ```json
 {
   "email": "user1@example.com",
@@ -60,22 +64,25 @@ Body:
 ```
 
 Response mẫu:
+
 ```json
 {
   "code": 200,
   "data": {
     "accessToken": "eyJ...",
     "refreshToken": "eyJ...",
-    "authenticated": true
+    "isAuthenticated": true
   }
 }
 ```
 
-Bạn cần lưu:
+Cần lưu:
+
 - `accessToken`
 - `refreshToken`
 
 Sau đó thêm header cho các request cần đăng nhập:
+
 ```http
 Authorization: Bearer eyJ...
 ```
@@ -84,12 +91,14 @@ Authorization: Bearer eyJ...
 
 ### Bước 3: Lấy `userId` của người còn lại
 
-Hiện backend không có API search user công khai theo username. Vì vậy để test, bạn cần biết trước `userId` của tài khoản còn lại:
-- lấy từ database
-- hoặc lấy từ response tạo user
-- hoặc gọi `GET /users/me` khi đăng nhập từng tài khoản
+Backend hiện chưa có API search user công khai theo username. Để test, cần biết trước `userId` của tài khoản còn lại:
 
-Ví dụ bạn đã có:
+- Lấy từ database.
+- Lấy từ response tạo user.
+- Gọi `GET /users/me` khi đăng nhập từng tài khoản.
+
+Ví dụ đã có:
+
 - `user1Id`
 - `user2Id`
 
@@ -104,6 +113,7 @@ Content-Type: application/json
 ```
 
 Body:
+
 ```json
 {
   "type": "DIRECT",
@@ -112,10 +122,12 @@ Body:
 ```
 
 Kết quả:
-- nếu chưa có chat cá nhân giữa `user1` và `user2`, hệ thống tạo mới
-- nếu đã có, hệ thống trả về conversation cũ
+
+- Nếu chưa có chat cá nhân giữa `user1` và `user2`, hệ thống tạo mới.
+- Nếu đã có, hệ thống trả về conversation cũ.
 
 Response mẫu:
+
 ```json
 {
   "code": 200,
@@ -161,6 +173,7 @@ Content-Type: application/json
 ```
 
 Body:
+
 ```json
 {
   "conversation_id": "conversationId",
@@ -177,6 +190,7 @@ Authorization: Bearer <token_user1>
 ```
 
 Hoặc phân trang:
+
 ```http
 GET /messages/conversation/conversationId/paged?page=0&size=20
 Authorization: Bearer <token_user1>
@@ -218,8 +232,9 @@ Authorization: Bearer <token_user1>
 ```
 
 Ý nghĩa:
-- chỉ ẩn tin nhắn với user hiện tại
-- không xóa cứng khỏi bảng `messages`
+
+- Chỉ ẩn tin nhắn với user hiện tại.
+- Không xóa cứng khỏi bảng `messages`.
 
 ## 5. Tạo chat nhóm
 
@@ -234,6 +249,7 @@ Content-Type: application/json
 ```
 
 Body:
+
 ```json
 {
   "type": "GROUP",
@@ -244,8 +260,9 @@ Body:
 ```
 
 Kết quả:
-- `user1` tự động là `OWNER`
-- `user2`, `user3` là `MEMBER`
+
+- `user1` tự động là `OWNER`.
+- `user2`, `user3` là `MEMBER`.
 
 ## 6. Quản lý nhóm chat
 
@@ -260,6 +277,7 @@ Content-Type: application/json
 ```
 
 Body:
+
 ```json
 {
   "member_ids": ["user4Id", "user5Id"]
@@ -276,49 +294,54 @@ Authorization: Bearer <token_owner_or_admin>
 ```
 
 Khi xóa nhóm:
-- conversation bị xóa
-- conversation members bị xóa
-- message trong group bị xóa
-- receipt và deletion liên quan cũng bị xóa
+
+- Conversation bị xóa.
+- Conversation members bị xóa.
+- Message trong group bị xóa.
+- Receipt và deletion liên quan cũng bị xóa.
 
 ## 7. Cách test nhanh bằng Postman
 
 Thứ tự collection nên chạy:
 
-1. `POST /auth/register` cho `user1`
-2. `POST /auth/register` cho `user2`
-3. `POST /auth/login` cho `user1`
-4. `POST /auth/login` cho `user2`
-5. `POST /conversations` với `type=DIRECT`
-6. `POST /messages`
-7. `GET /messages/conversation/{conversationId}`
-8. `PUT /messages/conversation/{conversationId}/read-all`
-9. `GET /messages/conversation/{conversationId}/unread-count`
+1. `POST /auth/register` cho `user1`.
+2. `POST /auth/register` cho `user2`.
+3. `POST /auth/login` cho `user1`.
+4. `POST /auth/login` cho `user2`.
+5. `POST /conversations` với `type=DIRECT`.
+6. `POST /messages`.
+7. `GET /messages/conversation/{conversationId}`.
+8. `PUT /messages/conversation/{conversationId}/read-all`.
+9. `GET /messages/conversation/{conversationId}/unread-count`.
 
 ## 8. Kết luận hiện trạng
 
-Hiện tại backend đã đủ cho chat cơ bản ở mức API:
-- tạo chat cá nhân
-- tạo chat nhóm
-- gửi tin nhắn
-- lấy tin nhắn
-- đánh dấu đã đọc
-- thêm thành viên nhóm
-- xóa nhóm
+Backend hiện đã đủ cho chat cơ bản ở mức API:
+
+- Tạo chat cá nhân.
+- Tạo chat nhóm.
+- Gửi tin nhắn.
+- Lấy tin nhắn.
+- Đánh dấu đã đọc.
+- Thêm thành viên nhóm.
+- Xóa nhóm.
 
 ## 9. Lưu ý quan trọng trước khi đưa vào production
 
 Hiện còn một điểm nghiệp vụ chưa chặt:
+
 - `MessageService` chưa kiểm tra người gửi có phải là thành viên của `conversation` hay không trước khi gửi tin nhắn.
 
 Điều này có nghĩa là:
-- backend hiện tại đủ để test và demo luồng chat cơ bản
-- nhưng chưa an toàn để xem là bản production-ready
+
+- Backend hiện tại đủ để test và demo luồng chat cơ bản.
+- Nhưng chưa an toàn để xem là bản production-ready.
 
 Nên bổ sung tiếp:
-- kiểm tra conversation có tồn tại
-- kiểm tra sender là thành viên của conversation
-- kiểm tra user chỉ được đọc/đánh dấu read trong conversation mà họ tham gia
+
+- Kiểm tra conversation có tồn tại.
+- Kiểm tra sender là thành viên của conversation.
+- Kiểm tra user chỉ được đọc hoặc đánh dấu read trong conversation mà họ tham gia.
 
 ## 10. Tài liệu liên quan
 

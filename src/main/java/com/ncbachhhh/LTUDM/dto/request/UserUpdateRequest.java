@@ -20,7 +20,7 @@ public class UserUpdateRequest {
     String displayName;
 
     @JsonProperty("avatar_url")
-    @URL(message = "Avatar URL must be a valid URL")
-    @Size(max = 500, message = "Avatar URL must not exceed 500 characters")
+    @URL(message = "INVALID_AVATAR_URL")
+    @Size(max = 500, message = "AVATAR_URL_TOO_LONG")
     String avatarUrl;
 }
