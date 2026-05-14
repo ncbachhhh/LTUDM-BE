@@ -92,13 +92,17 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
-    public List<UserProfileResponse> searchUsers(String query) {
+    public UserProfileResponse searchUserByEmail(String email) {
         String currentUserId = getCurrentUserId();
-        String normalizedQuery = normalizeSearchQuery(query);
+        String normalizedEmail = normalizeEmail(email);
 
-        return userRepository.searchOtherActiveUsers(currentUserId, normalizedQuery, PageRequest.of(0, 20)).stream()
-                .map(user -> toUserProfileResponse(user, currentUserId))
-                .toList();
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (currentUserId.equals(user.getId()) || !user.isActive()) {
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return toUserProfileResponse(user, currentUserId);
     }
 
     public UserProfileResponse getUserProfile(String userId) {
@@ -159,11 +163,11 @@ public class UserService {
         return authentication.getName();
     }
 
-    private String normalizeSearchQuery(String query) {
-        if (!StringUtils.hasText(query) || query.trim().length() < 2) {
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
             throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
         }
-        return query.trim();
+        return email.trim().toLowerCase();
     }
 
     private UserProfileResponse toUserProfileResponse(User user, String currentUserId) {

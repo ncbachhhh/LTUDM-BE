@@ -223,36 +223,33 @@ Ghi chú:
 
 ## 2.6 Tim kiem va xem profile user khac
 
-### 2.6.1 Tim kiem user khac
+### 2.6.1 Tim kiem user bang email
 
 ```http
-GET /users/search?query={keyword}
+GET /users/search-by-email?email={email}
 ```
 
 Mo ta:
 
-- Tim user khac bang email, username hoac display name.
-- Chi tra user dang active.
+- Tim user khac bang email chinh xac.
+- Chi tra user dang active va khac user hien tai.
 - Khong tra ve user hien tai.
-- `query` bat buoc va toi thieu 2 ky tu sau khi trim.
-- Gioi han hien tai: 20 ket qua dau tien.
+- `email` bat buoc.
 
 Response mau:
 
 ```json
 {
   "code": 200,
-  "data": [
-    {
-      "id": "uuid-user",
-      "email": "friend@example.com",
-      "username": "friend",
-      "display_name": "Friend User",
-      "avatar_url": null,
-      "friendship_status": "NONE",
-      "friendship_direction": "NONE"
-    }
-  ]
+  "data": {
+    "id": "uuid-user",
+    "email": "friend@example.com",
+    "username": "friend",
+    "display_name": "Friend User",
+    "avatar_url": null,
+    "friendship_status": "NONE",
+    "friendship_direction": "NONE"
+  }
 }
 ```
 

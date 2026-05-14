@@ -2,6 +2,7 @@ package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.FriendshipResponse;
+import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.FriendshipService;
 import lombok.AccessLevel;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -67,6 +69,14 @@ public class FriendshipController {
         return ApiResponse.<List<FriendshipResponse>>builder()
                 .code(ErrorCode.SUCCESS.getCode())
                 .data(friendshipService.getFriends())
+                .build();
+    }
+
+    @GetMapping("/search")
+    ApiResponse<List<UserProfileResponse>> searchMyFriendsByName(@RequestParam("name") String name) {
+        return ApiResponse.<List<UserProfileResponse>>builder()
+                .code(ErrorCode.SUCCESS.getCode())
+                .data(friendshipService.searchMyFriendsByName(name))
                 .build();
     }
 }

@@ -147,6 +147,39 @@ GET /friendships
 
 Tra ve cac friendship co status `ACCEPTED` lien quan den user hien tai.
 
+### 7. Tim kiem ban be cua toi theo ten
+
+```http
+GET /friendships/search?name={name}
+```
+
+Mo ta:
+
+- Chi tim trong danh sach ban be da `ACCEPTED` cua user hien tai.
+- Tim theo `username` hoac `display_name`.
+- Khong tim theo email.
+- `name` bat buoc va toi thieu 2 ky tu sau khi trim.
+- Gioi han hien tai: 20 ket qua dau tien.
+
+Response mau:
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": "uuid-friend",
+      "email": "friend@example.com",
+      "username": "friend",
+      "display_name": "Friend User",
+      "avatar_url": null,
+      "friendship_status": "ACCEPTED",
+      "friendship_direction": "NONE"
+    }
+  ]
+}
+```
+
 ## Rule lien quan chat
 
 - Hai user phai co `friendship_status = ACCEPTED` moi duoc tao direct conversation.

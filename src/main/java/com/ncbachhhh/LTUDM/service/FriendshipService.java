@@ -13,6 +13,7 @@ import com.ncbachhhh.LTUDM.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,6 +101,19 @@ public class FriendshipService {
                 .toList();
     }
 
+    public List<UserProfileResponse> searchMyFriendsByName(String name) {
+        String currentUserId = getCurrentUserId();
+        String normalizedName = normalizeName(name);
+
+        return userRepository.searchAcceptedFriendsByName(currentUserId, normalizedName, PageRequest.of(0, 20)).stream()
+                .map(user -> {
+                    Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, user.getId())
+                            .orElseThrow(() -> new AppException(ErrorCode.FRIENDSHIP_NOT_FOUND));
+                    return toUserProfile(user, friendship, currentUserId);
+                })
+                .toList();
+    }
+
     private Friendship getFriendship(String friendshipId) {
         if (!StringUtils.hasText(friendshipId)) {
             throw new AppException(ErrorCode.FRIENDSHIP_NOT_FOUND);
@@ -120,6 +134,13 @@ public class FriendshipService {
         if (!targetUser.isActive()) {
             throw new AppException(ErrorCode.USER_BANNED);
         }
+    }
+
+    private String normalizeName(String name) {
+        if (!StringUtils.hasText(name) || name.trim().length() < 2) {
+            throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
+        }
+        return name.trim();
     }
 
     private void ensureReceivedPendingRequest(Friendship friendship, String currentUserId) {

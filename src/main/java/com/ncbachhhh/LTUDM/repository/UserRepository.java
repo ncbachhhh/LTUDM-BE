@@ -26,15 +26,21 @@ public interface UserRepository extends JpaRepository<User, String> {
             WHERE u.active = true
               AND u.id <> :currentUserId
               AND (
-                    LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%'))
+                    LOWER(u.username) LIKE LOWER(CONCAT('%', :name, '%'))
+                 OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :name, '%'))
+              )
+              AND EXISTS (
+                    SELECT f
+                    FROM Friendship f
+                    WHERE f.status = com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus.ACCEPTED
+                      AND ((f.requesterId = :currentUserId AND f.addresseeId = u.id)
+                        OR (f.addresseeId = :currentUserId AND f.requesterId = u.id))
               )
             ORDER BY u.displayName ASC, u.username ASC
             """)
-    List<User> searchOtherActiveUsers(
+    List<User> searchAcceptedFriendsByName(
             @Param("currentUserId") String currentUserId,
-            @Param("query") String query,
+            @Param("name") String name,
             Pageable pageable);
 
 }
