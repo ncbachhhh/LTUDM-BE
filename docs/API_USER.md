@@ -221,6 +221,74 @@ Ghi chú:
 - Sau khi upload thành công, `avatar_url` trong bảng `users` sẽ được cập nhật.
 - URL trả về nên dùng `R2_PUBLIC_BASE_URL` để frontend truy cập trực tiếp.
 
+## 2.6 Tim kiem va xem profile user khac
+
+### 2.6.1 Tim kiem user khac
+
+```http
+GET /users/search?query={keyword}
+```
+
+Mo ta:
+
+- Tim user khac bang email, username hoac display name.
+- Chi tra user dang active.
+- Khong tra ve user hien tai.
+- `query` bat buoc va toi thieu 2 ky tu sau khi trim.
+- Gioi han hien tai: 20 ket qua dau tien.
+
+Response mau:
+
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": "uuid-user",
+      "email": "friend@example.com",
+      "username": "friend",
+      "display_name": "Friend User",
+      "avatar_url": null,
+      "friendship_status": "NONE",
+      "friendship_direction": "NONE"
+    }
+  ]
+}
+```
+
+### 2.6.2 Xem profile user khac
+
+```http
+GET /users/{userId}/profile
+```
+
+Mo ta:
+
+- Xem profile public cua user khac.
+- Khong cho xem profile cua chinh minh qua endpoint nay; dung `GET /users/me`.
+- User phai ton tai va dang active.
+- Response co `friendship_status` va `friendship_direction` de frontend hien nut phu hop.
+
+Response mau:
+
+```json
+{
+  "code": 200,
+  "data": {
+    "id": "uuid-user",
+    "email": "friend@example.com",
+    "username": "friend",
+    "display_name": "Friend User",
+    "avatar_url": null,
+    "friendship_status": "PENDING",
+    "friendship_direction": "INCOMING"
+  }
+}
+```
+
+`friendship_status` co the la `NONE`, `PENDING`, `ACCEPTED`, `DECLINED`, `BLOCKED`.
+`friendship_direction` co the la `NONE`, `INCOMING`, `OUTGOING`; chi co y nghia khi `friendship_status = PENDING`.
+
 ## 3. API admin
 
 Các API admin hiện đã bị disable trong source code.

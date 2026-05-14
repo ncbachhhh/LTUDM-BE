@@ -2,6 +2,10 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
+import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
+import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
+import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
+import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.Key.MessageDeletionId;
 import com.ncbachhhh.LTUDM.entity.Key.MessageReceiptId;
 import com.ncbachhhh.LTUDM.entity.Message.Message;
@@ -12,6 +16,8 @@ import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.MessageMapper;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
+import com.ncbachhhh.LTUDM.repository.ConversationRepository;
+import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
@@ -39,6 +45,8 @@ public class MessageService {
     MessageReceiptRepository messageReceiptRepository;
     MessageDeletionRepository messageDeletionRepository;
     ConversationMemberRepository conversationMemberRepository;
+    ConversationRepository conversationRepository;
+    FriendshipRepository friendshipRepository;
     MessageMapper messageMapper;
     R2StorageService r2StorageService;
 
@@ -222,6 +230,26 @@ public class MessageService {
 
         if (!conversationMemberRepository.existsByIdConversationIdAndIdUserId(conversationId, userId)) {
             throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
+        }
+        ensureDirectConversationIsBetweenFriends(conversationId, userId);
+    }
+
+    private void ensureDirectConversationIsBetweenFriends(String conversationId, String userId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
+        if (conversation.getType() != ConversationType.DIRECT) {
+            return;
+        }
+
+        String otherUserId = conversationMemberRepository.findByIdConversationId(conversationId).stream()
+                .map(ConversationMember::getId)
+                .map(id -> id.getUserId())
+                .filter(memberId -> !memberId.equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_DIRECT_CONVERSATION_MEMBERS));
+
+        if (!friendshipRepository.existsBetweenUsersByStatus(userId, otherUserId, FriendshipStatus.ACCEPTED)) {
+            throw new AppException(ErrorCode.NOT_FRIENDS);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.ncbachhhh.LTUDM.controller;
 import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
+import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.UserService;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -42,6 +45,24 @@ public class UserController {
     ApiResponse<UserResponse> getMyInfo() {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getMyInfo());
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @GetMapping("/search")
+    ApiResponse<List<UserProfileResponse>> searchUsers(@RequestParam("query") String query) {
+        ApiResponse<List<UserProfileResponse>> response = new ApiResponse<>();
+        response.setData(userService.searchUsers(query));
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @GetMapping("/{userId}/profile")
+    ApiResponse<UserProfileResponse> getUserProfile(@PathVariable("userId") String userId) {
+        ApiResponse<UserProfileResponse> response = new ApiResponse<>();
+        response.setData(userService.getUserProfile(userId));
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

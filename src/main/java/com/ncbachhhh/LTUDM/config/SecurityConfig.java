@@ -70,6 +70,7 @@ public class SecurityConfig {
                         .requestMatchers("/conversations/**").authenticated()
                         .requestMatchers("/users/**").authenticated()
                         .requestMatchers("/messages/**").authenticated()
+                        .requestMatchers("/friendships/**").authenticated()
 
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2

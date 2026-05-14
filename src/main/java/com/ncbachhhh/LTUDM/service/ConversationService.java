@@ -8,12 +8,14 @@ import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMemberRole;
+import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.Key.ConversationMemberId;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationRepository;
+import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
@@ -45,6 +47,7 @@ public class ConversationService {
     MessageReceiptRepository messageReceiptRepository;
     MessageDeletionRepository messageDeletionRepository;
     UserRepository userRepository;
+    FriendshipRepository friendshipRepository;
 
     // Tạo đoạn chat theo loại được gửi từ client
     @Transactional
@@ -83,6 +86,7 @@ public class ConversationService {
         if (newMemberIds.isEmpty()) {
             throw new AppException(ErrorCode.MEMBER_ALREADY_IN_CONVERSATION);
         }
+        ensureAllAreFriends(currentUserId, newMemberIds);
 
         Map<String, User> users = getUsersByIds(newMemberIds);
         List<ConversationMember> newMembers = newMemberIds.stream()
@@ -122,26 +126,14 @@ public class ConversationService {
 
         String targetUserId = memberIds.getFirst();
         getUser(targetUserId);
+        ensureAreFriends(currentUserId, targetUserId);
 
         Conversation existingConversation = findExistingDirectConversation(currentUserId, targetUserId);
         if (existingConversation != null) {
             return toConversationResponse(existingConversation);
         }
 
-        Conversation conversation = new Conversation();
-        conversation.setType(ConversationType.DIRECT);
-        conversation.setCreatedBy(currentUserId);
-        conversation.setTitle(null);
-        conversation.setAvatarUrl(null);
-        Conversation savedConversation = conversationRepository.save(conversation);
-
-        List<ConversationMember> members = List.of(
-                buildConversationMember(savedConversation.getId(), currentUserId, ConversationMemberRole.OWNER),
-                buildConversationMember(savedConversation.getId(), targetUserId, ConversationMemberRole.MEMBER)
-        );
-        conversationMemberRepository.saveAll(members);
-
-        return toConversationResponse(savedConversation);
+        return createDirectConversation(currentUserId, targetUserId);
     }
 
     // Tạo nhóm chat mới và gán người tạo làm chủ nhóm
@@ -158,6 +150,9 @@ public class ConversationService {
         if (allMemberIds.size() < 2) {
             throw new AppException(ErrorCode.INVALID_GROUP_CONVERSATION_MEMBERS);
         }
+        ensureAllAreFriends(currentUserId, allMemberIds.stream()
+                .filter(memberId -> !memberId.equals(currentUserId))
+                .toList());
 
         Map<String, User> users = getUsersByIds(new ArrayList<>(allMemberIds));
 
@@ -204,6 +199,40 @@ public class ConversationService {
         }
 
         return null;
+    }
+
+    @Transactional
+    public ConversationResponse findOrCreateDirectConversation(String firstUserId, String secondUserId) {
+        if (firstUserId == null || secondUserId == null || firstUserId.equals(secondUserId)) {
+            throw new AppException(ErrorCode.INVALID_DIRECT_CONVERSATION_MEMBERS);
+        }
+
+        getUser(firstUserId);
+        getUser(secondUserId);
+
+        Conversation existingConversation = findExistingDirectConversation(firstUserId, secondUserId);
+        if (existingConversation != null) {
+            return toConversationResponse(existingConversation);
+        }
+
+        return createDirectConversation(firstUserId, secondUserId);
+    }
+
+    private ConversationResponse createDirectConversation(String ownerId, String memberId) {
+        Conversation conversation = new Conversation();
+        conversation.setType(ConversationType.DIRECT);
+        conversation.setCreatedBy(ownerId);
+        conversation.setTitle(null);
+        conversation.setAvatarUrl(null);
+        Conversation savedConversation = conversationRepository.save(conversation);
+
+        List<ConversationMember> members = List.of(
+                buildConversationMember(savedConversation.getId(), ownerId, ConversationMemberRole.OWNER),
+                buildConversationMember(savedConversation.getId(), memberId, ConversationMemberRole.MEMBER)
+        );
+        conversationMemberRepository.saveAll(members);
+
+        return toConversationResponse(savedConversation);
     }
 
     // Build response conversation với dữ liệu member lấy từ database
@@ -318,6 +347,16 @@ public class ConversationService {
     private User getUser(String userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void ensureAllAreFriends(String currentUserId, List<String> memberIds) {
+        memberIds.forEach(memberId -> ensureAreFriends(currentUserId, memberId));
+    }
+
+    private void ensureAreFriends(String firstUserId, String secondUserId) {
+        if (!friendshipRepository.existsBetweenUsersByStatus(firstUserId, secondUserId, FriendshipStatus.ACCEPTED)) {
+            throw new AppException(ErrorCode.NOT_FRIENDS);
+        }
     }
 
     // Lấy id user hiện tại từ SecurityContext
