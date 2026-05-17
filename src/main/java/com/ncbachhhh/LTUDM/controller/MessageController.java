@@ -14,8 +14,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/messages")
 @RequiredArgsConstructor
@@ -23,17 +21,6 @@ import java.util.List;
 public class MessageController {
     MessageService messageService;
     SimpMessagingTemplate messagingTemplate;
-
-    // POST /messages - Gửi tin nhắn mới
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    ApiResponse<MessageResponse> sendMessage(@RequestBody MessageRequest request) {
-        MessageResponse savedMessage = messageService.sendMessage(request);
-        messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
-        ApiResponse<MessageResponse> response = new ApiResponse<>();
-        response.setData(savedMessage);
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
-    }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<MessageResponse> sendMessageWithImage(
@@ -43,15 +30,6 @@ public class MessageController {
         messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
         ApiResponse<MessageResponse> response = new ApiResponse<>();
         response.setData(savedMessage);
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
-    }
-
-    // GET /messages/conversation/{conversationId} - Lấy tất cả tin nhắn trong conversation
-    @GetMapping("/conversation/{conversationId}")
-    ApiResponse<List<MessageResponse>> getMessagesByConversation(@PathVariable String conversationId) {
-        ApiResponse<List<MessageResponse>> response = new ApiResponse<>();
-        response.setData(messageService.getMessagesByConversation(conversationId));
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }

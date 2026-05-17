@@ -84,12 +84,6 @@ POST /auth/refresh
 POST /auth/logout
 ```
 
-### 1.5 Kiểm tra token
-
-```http
-POST /auth/introspect
-```
-
 ## 2. API người dùng
 
 Header bắt buộc:
@@ -104,15 +98,7 @@ Authorization: Bearer {accessToken}
 GET /users/me
 ```
 
-### 2.2 Lấy thông tin user theo ID
-
-```http
-GET /users/{userId}
-```
-
-Chỉ chính chủ hoặc admin mới truy cập được.
-
-### 2.3 Cập nhật thông tin user
+### 2.2 Cập nhật thông tin user
 
 ```http
 PATCH /users/{userId}
@@ -129,7 +115,7 @@ Request:
 }
 ```
 
-### 2.4 Đổi mật khẩu
+### 2.3 Đổi mật khẩu
 
 ```http
 POST /users/me/change-password
@@ -154,7 +140,7 @@ Response:
 }
 ```
 
-### 2.5 Upload avatar
+### 2.4 Upload avatar
 
 ```http
 PATCH /users/me/avatar

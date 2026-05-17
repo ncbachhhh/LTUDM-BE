@@ -8,23 +8,13 @@ http://localhost:8080/api/v1
 
 ## Endpoint
 
-### 1. Gửi tin nhắn
+### 1. Upload và gửi tin nhắn ảnh
 
 ```http
 POST /messages
 ```
 
-Request body cho `TEXT` (`application/json`):
-
-```json
-{
-  "conversation_id": "uuid-conversation",
-  "content": "Nội dung tin nhắn",
-  "type": "TEXT"
-}
-```
-
-Gửi `IMAGE` qua `multipart/form-data`:
+Endpoint này chỉ nhận `multipart/form-data` để gửi ảnh. Tin nhắn `TEXT` được gửi qua WebSocket `/app/chat/{conversationId}`.
 
 Part `message`:
 
@@ -64,37 +54,7 @@ Response:
 }
 ```
 
-### 2. Lấy tin nhắn trong conversation
-
-```http
-GET /messages/conversation/{conversationId}
-```
-
-Response:
-
-```json
-{
-  "code": 200,
-  "data": [
-    {
-      "id": "uuid-message-1",
-      "conversation_id": "uuid-conversation",
-      "sender_id": "uuid-sender",
-      "type": "TEXT",
-      "content": "Tin nhắn 1",
-      "created_at": "2026-03-12T10:30:00",
-      "is_read": true,
-      "is_edited": false,
-      "edited_at": null,
-      "is_recalled": false,
-      "recalled_at": null,
-      "recalled_by": null
-    }
-  ]
-}
-```
-
-### 3. Lấy tin nhắn với phân trang
+### 2. Lấy tin nhắn với phân trang
 
 ```http
 GET /messages/conversation/{conversationId}/paged?page=0&size=20
@@ -105,7 +65,7 @@ Query parameters:
 - `page`: số trang, mặc định `0`.
 - `size`: số bản ghi, mặc định `20`.
 
-### 4. Đánh dấu một tin nhắn đã đọc
+### 3. Đánh dấu một tin nhắn đã đọc
 
 ```http
 PUT /messages/{messageId}/read
@@ -120,7 +80,7 @@ Response:
 }
 ```
 
-### 5. Đánh dấu toàn bộ tin nhắn trong conversation đã đọc
+### 4. Đánh dấu toàn bộ tin nhắn trong conversation đã đọc
 
 ```http
 PUT /messages/conversation/{conversationId}/read-all
@@ -135,7 +95,7 @@ Response:
 }
 ```
 
-### 6. Xóa tin nhắn phía cá nhân
+### 5. Xóa tin nhắn phía cá nhân
 
 ```http
 DELETE /messages/{messageId}
@@ -156,7 +116,7 @@ Response:
 }
 ```
 
-### 7. Đếm số tin nhắn chưa đọc
+### 6. Đếm số tin nhắn chưa đọc
 
 ```http
 GET /messages/conversation/{conversationId}/unread-count
@@ -171,7 +131,7 @@ Response:
 }
 ```
 
-### 8. Lấy tin nhắn mới nhất
+### 7. Lấy tin nhắn mới nhất
 
 ```http
 GET /messages/conversation/{conversationId}/latest

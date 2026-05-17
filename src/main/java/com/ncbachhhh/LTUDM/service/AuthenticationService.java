@@ -1,11 +1,9 @@
 package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.AuthenticationRequest;
-import com.ncbachhhh.LTUDM.dto.request.IntrospectRequest;
 import com.ncbachhhh.LTUDM.dto.request.LogoutRequest;
 import com.ncbachhhh.LTUDM.dto.request.RefreshTokenRequest;
 import com.ncbachhhh.LTUDM.dto.response.AuthenticationResponse;
-import com.ncbachhhh.LTUDM.dto.response.IntrospectResponse;
 import com.ncbachhhh.LTUDM.entity.InvalidatedToken;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
@@ -56,20 +54,6 @@ public class AuthenticationService {
     @NonFinal
     @Value("${jwt.refresh-token-expiration:604800}")
     protected long REFRESH_TOKEN_EXPIRATION;
-
-    // Kiểm tra token còn hợp lệ hay không
-    public IntrospectResponse introspect(IntrospectRequest request) throws ParseException, JOSEException {
-        boolean isValid = true;
-        try {
-            verifyToken(request.getToken());
-        } catch (AppException e) {
-            isValid = false;
-        }
-
-        return IntrospectResponse.builder()
-                .valid(isValid)
-                .build();
-    }
 
     // Xác thực email và mật khẩu để cấp access token và refresh token
     public AuthenticationResponse authenticate(AuthenticationRequest request) {

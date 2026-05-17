@@ -167,29 +167,21 @@ Hãy lưu `conversationId`.
 ### Bước 5: Gửi tin nhắn
 
 ```http
-POST /messages
+STOMP SEND /app/chat/conversationId
 Authorization: Bearer <token_user1>
-Content-Type: application/json
+Header Authorization nằm ở frame CONNECT
 ```
 
 Body:
 
 ```json
 {
-  "conversation_id": "conversationId",
   "content": "Xin chào",
   "type": "TEXT"
 }
 ```
 
 ### Bước 6: Lấy danh sách tin nhắn
-
-```http
-GET /messages/conversation/conversationId
-Authorization: Bearer <token_user1>
-```
-
-Hoặc phân trang:
 
 ```http
 GET /messages/conversation/conversationId/paged?page=0&size=20
@@ -309,8 +301,8 @@ Thứ tự collection nên chạy:
 3. `POST /auth/login` cho `user1`.
 4. `POST /auth/login` cho `user2`.
 5. `POST /conversations` với `type=DIRECT`.
-6. `POST /messages`.
-7. `GET /messages/conversation/{conversationId}`.
+6. Gửi text qua WebSocket `SEND /app/chat/{conversationId}`.
+7. `GET /messages/conversation/{conversationId}/paged?page=0&size=20`.
 8. `PUT /messages/conversation/{conversationId}/read-all`.
 9. `GET /messages/conversation/{conversationId}/unread-count`.
 

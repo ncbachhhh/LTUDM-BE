@@ -51,11 +51,6 @@ public class MessageService {
         return authentication.getName();
     }
 
-    // Gửi tin nhắn với sender là user hiện tại
-    public MessageResponse sendMessage(MessageRequest request) {
-        return sendMessage(request, null, getCurrentUserId());
-    }
-
     public MessageResponse sendMessage(MessageRequest request, MultipartFile imageFile) {
         return sendMessage(request, imageFile, getCurrentUserId());
     }
@@ -101,16 +96,6 @@ public class MessageService {
         }
 
         return content;
-    }
-
-    // Lấy toàn bộ tin nhắn hiển thị được trong một conversation
-    public List<MessageResponse> getMessagesByConversation(String conversationId) {
-        String userId = getCurrentUserId();
-        ensureCanAccessConversation(conversationId, userId);
-
-        return messageRepository.findVisibleMessagesByConversation(conversationId, userId).stream()
-                .map(message -> toMessageResponse(message, userId))
-                .toList();
     }
 
     // Lấy danh sách tin nhắn có phân trang

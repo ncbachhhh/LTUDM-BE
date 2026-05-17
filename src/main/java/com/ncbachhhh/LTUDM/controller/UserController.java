@@ -66,13 +66,4 @@ public class UserController {
         return response;
     }
 
-    @GetMapping("/{userId}")
-    @PreAuthorize("@userSecurity.isOwner(authentication, #userId)")
-    ApiResponse<UserResponse> getUserById(@PathVariable("userId") String userId) {
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setData(userService.getUserById(userId));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
-    }
 }

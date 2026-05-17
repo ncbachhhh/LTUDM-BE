@@ -78,11 +78,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public UserResponse getUserById(String userId) {
-        return userMapper.toUserResponse(userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
-    }
-
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

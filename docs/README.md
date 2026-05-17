@@ -30,7 +30,6 @@ Cập nhật lần cuối: 2026-05-13
 |----------|---------------|---------------|
 | `POST /auth/*` | Public | - |
 | `GET /users/me` | Đã đăng nhập | - |
-| `GET /users/{userId}` | Đã đăng nhập | Chính chủ hoặc admin |
 | `PATCH /users/{userId}` | Đã đăng nhập | Chính chủ hoặc admin |
 | `PATCH /users/me/avatar` | Đã đăng nhập | - |
 | `POST /users/me/change-password` | Đã đăng nhập | - |

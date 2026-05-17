@@ -2,7 +2,6 @@ package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.AuthenticationRequest;
 import com.ncbachhhh.LTUDM.dto.request.ForgotPasswordRequest;
-import com.ncbachhhh.LTUDM.dto.request.IntrospectRequest;
 import com.ncbachhhh.LTUDM.dto.request.LogoutRequest;
 import com.ncbachhhh.LTUDM.dto.request.RefreshTokenRequest;
 import com.ncbachhhh.LTUDM.dto.request.ResetPasswordRequest;
@@ -10,7 +9,6 @@ import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.VerifyResetOtpRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.AuthenticationResponse;
-import com.ncbachhhh.LTUDM.dto.response.IntrospectResponse;
 import com.ncbachhhh.LTUDM.dto.response.ResetOtpVerificationResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
@@ -80,18 +78,6 @@ public class AuthenticationController {
         return ApiResponse.<Void>builder()
                 .code(200)
                 .message("Đăng xuất thành công.")
-                .build();
-    }
-
-    // Kiểm tra token
-    // POST /auth/introspect - Kiểm tra token còn hợp lệ hay không
-    @PostMapping("/introspect")
-    public ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request)
-            throws ParseException, JOSEException {
-        var result = authenticationService.introspect(request);
-        return ApiResponse.<IntrospectResponse>builder()
-                .code(200)
-                .data(result)
                 .build();
     }
 
