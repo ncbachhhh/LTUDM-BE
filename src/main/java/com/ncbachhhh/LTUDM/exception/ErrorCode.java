@@ -42,6 +42,15 @@ public enum ErrorCode {
     AVATAR_UPLOAD_FAILED(500, "Upload avatar thất bại"),
     INVALID_AVATAR_URL(400, "Avatar URL không hợp lệ"),
     AVATAR_URL_TOO_LONG(400, "Avatar URL không được vượt quá 500 ký tự"),
+    SEARCH_QUERY_REQUIRED(400, "Từ khóa tìm kiếm là bắt buộc"),
+
+    // ===== Friendship errors =====
+    CANNOT_FRIEND_SELF(400, "Không thể kết bạn với chính mình"),
+    FRIENDSHIP_ALREADY_EXISTS(400, "Yêu cầu kết bạn đã tồn tại"),
+    FRIENDSHIP_NOT_FOUND(404, "Không tìm thấy yêu cầu kết bạn"),
+    FRIENDSHIP_REQUEST_NOT_PENDING(400, "Yêu cầu kết bạn không còn chờ xử lý"),
+    FRIENDSHIP_REQUEST_NOT_RECEIVED(403, "Bạn không có quyền xử lý yêu cầu kết bạn này"),
+    NOT_FRIENDS(403, "Hai người dùng chưa kết bạn"),
 
     // ===== Message errors =====
     MESSAGE_NOT_FOUND(404, "Không tìm thấy tin nhắn"),

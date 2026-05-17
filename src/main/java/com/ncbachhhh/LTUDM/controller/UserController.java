@@ -3,6 +3,7 @@ package com.ncbachhhh.LTUDM.controller;
 import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
+import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.UserService;
@@ -42,6 +43,24 @@ public class UserController {
     ApiResponse<UserResponse> getMyInfo() {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setData(userService.getMyInfo());
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @GetMapping("/search-by-email")
+    ApiResponse<UserProfileResponse> searchUserByEmail(@RequestParam("email") String email) {
+        ApiResponse<UserProfileResponse> response = new ApiResponse<>();
+        response.setData(userService.searchUserByEmail(email));
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @GetMapping("/{userId}/profile")
+    ApiResponse<UserProfileResponse> getUserProfile(@PathVariable("userId") String userId) {
+        ApiResponse<UserProfileResponse> response = new ApiResponse<>();
+        response.setData(userService.getUserProfile(userId));
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

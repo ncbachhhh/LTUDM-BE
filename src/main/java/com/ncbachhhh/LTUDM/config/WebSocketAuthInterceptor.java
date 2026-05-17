@@ -2,7 +2,12 @@ package com.ncbachhhh.LTUDM.config;
 
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
+import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
+import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
+import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
+import com.ncbachhhh.LTUDM.repository.ConversationRepository;
+import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.InvalidatedTokenRepository;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -42,6 +47,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final InvalidatedTokenRepository invalidatedTokenRepository;
     private final ConversationMemberRepository conversationMemberRepository;
+    private final ConversationRepository conversationRepository;
+    private final FriendshipRepository friendshipRepository;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -127,6 +134,26 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         String userId = accessor.getUser().getName();
         if (!conversationMemberRepository.existsByIdConversationIdAndIdUserId(conversationId, userId)) {
             throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
+        }
+        ensureDirectConversationIsBetweenFriends(conversationId, userId);
+    }
+
+    private void ensureDirectConversationIsBetweenFriends(String conversationId, String userId) {
+        var conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
+        if (conversation.getType() != ConversationType.DIRECT) {
+            return;
+        }
+
+        String otherUserId = conversationMemberRepository.findByIdConversationId(conversationId).stream()
+                .map(ConversationMember::getId)
+                .map(id -> id.getUserId())
+                .filter(memberId -> !memberId.equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_DIRECT_CONVERSATION_MEMBERS));
+
+        if (!friendshipRepository.existsBetweenUsersByStatus(userId, otherUserId, FriendshipStatus.ACCEPTED)) {
+            throw new AppException(ErrorCode.NOT_FRIENDS);
         }
     }
 }

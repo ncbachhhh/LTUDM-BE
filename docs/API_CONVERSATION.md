@@ -167,6 +167,14 @@ Quy tắc response:
 - Nếu user không có conversation nào, API trả về mảng rỗng `[]`.
 - Mỗi conversation bao gồm danh sách members kèm role và thời gian tham gia.
 
+## Rule ket ban khi chat
+
+- Tao `DIRECT` conversation chi thanh cong khi 2 user da ket ban (`friendship.status = ACCEPTED`).
+- Khi accept loi moi ket ban thanh cong, backend tu tao direct conversation neu chua co.
+- Tao `GROUP` yeu cau tat ca `member_ids` la ban cua user tao nhom.
+- Them member vao group yeu cau member moi la ban cua user thuc hien thao tac.
+- REST message va WebSocket direct chat cung kiem tra friendship. Neu 2 user khong con la ban, backend tra loi `NOT_FRIENDS`.
+
 ## Mã lỗi
 
 | Code | Message |

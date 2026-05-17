@@ -11,6 +11,7 @@ Cập nhật lần cuối: 2026-05-13
 | [API_FILE_UPLOAD.md](./API_FILE_UPLOAD.md) | Cơ chế upload file lên Cloudflare R2 và cách tái sử dụng trong code |
 | [API_MESSAGE.md](./API_MESSAGE.md) | API tin nhắn |
 | [API_CONVERSATION.md](./API_CONVERSATION.md) | API tạo và quản lý đoạn chat |
+| [API_FRIENDSHIP.md](./API_FRIENDSHIP.md) | API ket ban, incoming/outgoing request va rule chi ban be moi chat |
 | [API_WEBSOCKET.md](./API_WEBSOCKET.md) | WebSocket cho realtime chat |
 | [CHAT_STEP_BY_STEP.md](./CHAT_STEP_BY_STEP.md) | Hướng dẫn test luồng chat cơ bản từng bước |
 
