@@ -1,7 +1,7 @@
 package com.ncbachhhh.LTUDM.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMemberRole;
+import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,28 +9,40 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class ConversationMemberResponse {
-    @JsonProperty("user_id")
-    String userId;
+public class ConversationInfoResponse {
+    String id;
 
-    String username;
+    ConversationType type;
+
+    String title;
 
     @JsonProperty("display_name")
     String displayName;
 
-    String nickname;
-
     @JsonProperty("avatar_url")
     String avatarUrl;
 
-    ConversationMemberRole role;
+    String status;
 
-    @JsonProperty("joined_at")
-    LocalDateTime joinedAt;
+    @JsonProperty("created_by")
+    String createdBy;
+
+    @JsonProperty("created_at")
+    LocalDateTime createdAt;
+
+    @JsonProperty("member_count")
+    long memberCount;
+
+    List<ConversationMemberResponse> members;
+
+    List<ConversationInfoStatResponse> stats;
+
+    List<String> settings;
 }

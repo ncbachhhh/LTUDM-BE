@@ -60,6 +60,7 @@ public enum ErrorCode {
     INVALID_DIRECT_CONVERSATION_MEMBERS(400, "Chat cá nhân phải có đúng một người dùng khác"),
     INVALID_GROUP_CONVERSATION_MEMBERS(400, "Chat nhóm phải có ít nhất hai thành viên"),
     INVALID_CONVERSATION_MEMBERS(400, "Danh sách thành viên đoạn chat không hợp lệ"),
+    INVALID_NICKNAME_FORMAT(400, "Biệt danh không được vượt quá 100 ký tự"),
     GROUP_TITLE_REQUIRED(400, "Tên nhóm là bắt buộc"),
     MEMBER_ALREADY_IN_CONVERSATION(400, "Tất cả người dùng đã là thành viên của đoạn chat này"),
     GROUP_OPERATION_NOT_ALLOWED(400, "Thao tác này chỉ áp dụng cho chat nhóm"),

@@ -2,14 +2,20 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.AddConversationMembersRequest;
 import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
+import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
+import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
+import com.ncbachhhh.LTUDM.dto.response.ConversationInfoStatResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationMemberResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
+import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMemberRole;
 import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.Key.ConversationMemberId;
+import com.ncbachhhh.LTUDM.entity.Message.MessageType;
+import com.ncbachhhh.LTUDM.entity.Message.Message;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
@@ -24,9 +30,11 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -115,6 +123,77 @@ public class ConversationService {
         }
         conversationMemberRepository.deleteByIdConversationId(conversationId);
         conversationRepository.delete(conversation);
+    }
+
+    @Transactional
+    public ConversationResponse updateMemberNickname(String conversationId, String memberId, UpdateConversationNicknameRequest request) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureConversationMember(conversationId, currentUserId);
+
+        ConversationMember targetMember = conversationMemberRepository.findById(new ConversationMemberId(conversationId, memberId))
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_CONVERSATION_MEMBER));
+
+        String nickname = request.getNickname() == null ? null : request.getNickname().trim();
+        targetMember.setNickname(nickname == null || nickname.isEmpty() ? null : nickname);
+        conversationMemberRepository.save(targetMember);
+
+        return toConversationResponse(conversation);
+    }
+
+    @Transactional(readOnly = true)
+    public ConversationResponse getConversationPreviewForUser(String conversationId, String userId) {
+        Conversation conversation = getConversation(conversationId);
+        ensureConversationMember(conversationId, userId);
+        return enrichConversationPreview(toConversationResponse(conversation), userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getConversationMemberIds(String conversationId) {
+        getConversation(conversationId);
+        return conversationMemberRepository.findByIdConversationId(conversationId).stream()
+                .map(member -> member.getId().getUserId())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ConversationInfoResponse getConversationInfo(String conversationId) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureConversationMember(conversationId, currentUserId);
+
+        ConversationResponse conversationResponse = toConversationResponse(conversation);
+        ConversationMemberResponse displayMember = null;
+
+        if (conversation.getType() == ConversationType.DIRECT) {
+            displayMember = conversationResponse.getMembers().stream()
+                    .filter(member -> !member.getUserId().equals(currentUserId))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        String displayName = conversation.getType() == ConversationType.GROUP
+                ? defaultIfBlank(conversation.getTitle(), "Nhóm chat")
+                : getMemberDisplayName(displayMember);
+
+        String avatarUrl = conversation.getType() == ConversationType.GROUP
+                ? conversation.getAvatarUrl()
+                : displayMember == null ? null : displayMember.getAvatarUrl();
+
+        return ConversationInfoResponse.builder()
+                .id(conversation.getId())
+                .type(conversation.getType())
+                .title(conversation.getTitle())
+                .displayName(displayName)
+                .avatarUrl(avatarUrl)
+                .status(conversation.getType() == ConversationType.GROUP ? "Nhóm chat" : "Ngoại tuyến")
+                .createdBy(conversation.getCreatedBy())
+                .createdAt(conversation.getCreatedAt())
+                .memberCount(conversationResponse.getMembers().size())
+                .members(conversationResponse.getMembers())
+                .stats(buildConversationInfoStats(conversationId, conversationResponse.getMembers().size()))
+                .settings(List.of("Chỉnh sửa biệt danh", "Thay đổi biểu tượng cảm xúc"))
+                .build();
     }
 
     // Tạo chat cá nhân mới hoặc trả về chat đã tồn tại giữa hai user
@@ -259,6 +338,7 @@ public class ConversationService {
                             .userId(member.getId().getUserId())
                             .username(user.getUsername())
                             .displayName(user.getDisplayName())
+                            .nickname(member.getNickname())
                             .avatarUrl(user.getAvatarUrl())
                             .role(member.getRole())
                             .joinedAt(member.getJoinedAt())
@@ -275,6 +355,38 @@ public class ConversationService {
                 .avatarUrl(conversation.getAvatarUrl())
                 .members(memberResponses)
                 .build();
+    }
+
+    private ConversationResponse enrichConversationPreview(ConversationResponse response, String userId) {
+        response.setUnreadCount(messageRepository.countUnreadMessages(response.getId(), userId));
+        response.setLatestMessage(getLatestVisibleMessage(response.getId(), userId));
+        return response;
+    }
+
+    private MessageResponse getLatestVisibleMessage(String conversationId, String userId) {
+        var page = messageRepository.findVisibleMessagesByConversationPaged(conversationId, userId, PageRequest.of(0, 1));
+        if (page.isEmpty()) {
+            return null;
+        }
+
+        return toMessageResponse(page.getContent().getFirst(), userId);
+    }
+
+    private MessageResponse toMessageResponse(Message message, String userId) {
+        MessageResponse response = new MessageResponse();
+        response.setId(message.getId());
+        response.setConversationId(message.getConversationId());
+        response.setSenderId(message.getSenderId());
+        response.setType(message.getType());
+        response.setContent(message.getContent());
+        response.setCreatedAt(message.getCreatedAt());
+        response.setEdited(message.isEdited());
+        response.setEditedAt(message.getEditedAt());
+        response.setRecalled(message.isRecalled());
+        response.setRecalledAt(message.getRecalledAt());
+        response.setRecalledBy(message.getRecalledBy());
+        response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));
+        return response;
     }
 
     // Lấy conversation hoặc ném lỗi nếu không tồn tại
@@ -297,6 +409,74 @@ public class ConversationService {
         if (member.getRole() != ConversationMemberRole.OWNER) {
             throw new AppException(ErrorCode.NOT_GROUP_MANAGER);
         }
+    }
+
+    private void ensureConversationMember(String conversationId, String userId) {
+        if (!conversationMemberRepository.existsByIdConversationIdAndIdUserId(conversationId, userId)) {
+            throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
+        }
+    }
+
+    private List<ConversationInfoStatResponse> buildConversationInfoStats(String conversationId, int memberCount) {
+        long links = messageRepository.countByConversationIdAndTypeAndContentContainingIgnoreCase(
+                conversationId,
+                MessageType.TEXT,
+                "http://"
+        ) + messageRepository.countByConversationIdAndTypeAndContentContainingIgnoreCase(
+                conversationId,
+                MessageType.TEXT,
+                "https://"
+        );
+        long files = messageRepository.countByConversationIdAndType(conversationId, MessageType.FILE);
+        long images = messageRepository.countByConversationIdAndType(conversationId, MessageType.IMAGE);
+
+        return List.of(
+                ConversationInfoStatResponse.builder()
+                        .id("members")
+                        .label("Thành viên")
+                        .value(String.valueOf(memberCount))
+                        .build(),
+                ConversationInfoStatResponse.builder()
+                        .id("links")
+                        .label("Link")
+                        .value(String.valueOf(links))
+                        .build(),
+                ConversationInfoStatResponse.builder()
+                        .id("files")
+                        .label("File")
+                        .value(String.valueOf(files))
+                        .build(),
+                ConversationInfoStatResponse.builder()
+                        .id("images")
+                        .label("Hình ảnh")
+                        .value(String.valueOf(images))
+                        .build()
+        );
+    }
+
+    private String getMemberDisplayName(ConversationMemberResponse member) {
+        if (member == null) {
+            return "Người dùng";
+        }
+
+        if (hasText(member.getNickname())) {
+            return member.getNickname();
+        }
+        if (hasText(member.getDisplayName())) {
+            return member.getDisplayName();
+        }
+        if (hasText(member.getUsername())) {
+            return member.getUsername();
+        }
+        return "Người dùng";
+    }
+
+    private String defaultIfBlank(String value, String fallback) {
+        return hasText(value) ? value : fallback;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     // Tạo entity member cho conversation
@@ -389,8 +569,16 @@ public class ConversationService {
 
         // Lấy danh sách Conversation và sắp xếp theo created_at giảm dần
         return conversationRepository.findAllById(conversationIds).stream()
-                .sorted(Comparator.comparing(Conversation::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::toConversationResponse)
+                .map(response -> enrichConversationPreview(response, userId))
+                .sorted(Comparator.comparing(this::getConversationPreviewTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
+    }
+
+    private LocalDateTime getConversationPreviewTime(ConversationResponse response) {
+        if (response.getLatestMessage() != null && response.getLatestMessage().getCreatedAt() != null) {
+            return response.getLatestMessage().getCreatedAt();
+        }
+        return response.getCreatedAt();
     }
 }

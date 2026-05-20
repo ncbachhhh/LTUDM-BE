@@ -2,8 +2,11 @@ package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
+import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
+import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
+import com.ncbachhhh.LTUDM.service.ConversationService;
 import com.ncbachhhh.LTUDM.service.MessageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,8 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MessageController {
     MessageService messageService;
+    ConversationService conversationService;
     SimpMessagingTemplate messagingTemplate;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -28,6 +34,7 @@ public class MessageController {
             @RequestPart(value = "file", required = false) MultipartFile file) {
         MessageResponse savedMessage = messageService.sendMessage(request, file);
         messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
+        sendConversationPreviewToMembers(request.getConversationId());
         ApiResponse<MessageResponse> response = new ApiResponse<>();
         response.setData(savedMessage);
         response.setCode(ErrorCode.SUCCESS.getCode());
@@ -61,6 +68,7 @@ public class MessageController {
     ApiResponse<String> markAllAsRead(@PathVariable String conversationId) {
         ApiResponse<String> response = new ApiResponse<>();
         messageService.markAllAsRead(conversationId);
+        sendConversationPreviewToUser(conversationId, getCurrentUserId());
         response.setData("Đã đánh dấu toàn bộ tin nhắn là đã đọc.");
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
@@ -92,5 +100,23 @@ public class MessageController {
         response.setData(messageService.getLatestMessage(conversationId));
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
+    }
+
+    private void sendConversationPreviewToMembers(String conversationId) {
+        conversationService.getConversationMemberIds(conversationId)
+                .forEach(memberId -> sendConversationPreviewToUser(conversationId, memberId));
+    }
+
+    private void sendConversationPreviewToUser(String conversationId, String userId) {
+        ConversationResponse preview = conversationService.getConversationPreviewForUser(conversationId, userId);
+        messagingTemplate.convertAndSendToUser(userId, "/queue/conversations", preview);
+    }
+
+    private String getCurrentUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !StringUtils.hasText(authentication.getName())) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        return authentication.getName();
     }
 }

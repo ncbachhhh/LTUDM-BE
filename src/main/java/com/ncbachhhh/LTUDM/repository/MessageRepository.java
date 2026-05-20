@@ -1,6 +1,7 @@
 package com.ncbachhhh.LTUDM.repository;
 
 import com.ncbachhhh.LTUDM.entity.Message.Message;
+import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,14 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<Message, String> {
     List<Message> findByConversationId(String conversationId);
+
+    long countByConversationIdAndType(String conversationId, MessageType type);
+
+    long countByConversationIdAndTypeAndContentContainingIgnoreCase(
+            String conversationId,
+            MessageType type,
+            String content
+    );
 
     @Modifying
     void deleteByConversationId(String conversationId);

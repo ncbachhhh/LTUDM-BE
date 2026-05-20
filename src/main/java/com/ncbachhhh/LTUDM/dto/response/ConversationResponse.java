@@ -32,5 +32,11 @@ public class ConversationResponse {
     @JsonProperty("avatar_url")
     String avatarUrl;
 
+    @JsonProperty("latest_message")
+    MessageResponse latestMessage;
+
+    @JsonProperty("unread_count")
+    long unreadCount;
+
     List<ConversationMemberResponse> members;
 }

@@ -2,7 +2,9 @@ package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.AddConversationMembersRequest;
 import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
+import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
+import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.ConversationService;
@@ -13,6 +15,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,6 +35,14 @@ public class ConversationController {
     ApiResponse<List<ConversationResponse>> getMyConversations() {
         ApiResponse<List<ConversationResponse>> response = new ApiResponse<>();
         response.setData(conversationService.getMyConversations());
+        response.setCode(ErrorCode.SUCCESS.getCode());
+        return response;
+    }
+
+    @GetMapping("/{conversationId}/info")
+    ApiResponse<ConversationInfoResponse> getConversationInfo(@PathVariable String conversationId) {
+        ApiResponse<ConversationInfoResponse> response = new ApiResponse<>();
+        response.setData(conversationService.getConversationInfo(conversationId));
         response.setCode(ErrorCode.SUCCESS.getCode());
         return response;
     }
@@ -57,6 +68,17 @@ public class ConversationController {
     }
 
     // DELETE /conversations/{conversationId} - Xóa nhóm chat
+    @PatchMapping("/{conversationId}/members/{memberId}/nickname")
+    ApiResponse<ConversationResponse> updateMemberNickname(
+            @PathVariable String conversationId,
+            @PathVariable String memberId,
+            @RequestBody @Valid UpdateConversationNicknameRequest request) {
+        ApiResponse<ConversationResponse> response = new ApiResponse<>();
+        response.setData(conversationService.updateMemberNickname(conversationId, memberId, request));
+        response.setCode(ErrorCode.SUCCESS.getCode());
+        return response;
+    }
+
     @DeleteMapping("/{conversationId}")
     ApiResponse<String> deleteGroupConversation(@PathVariable String conversationId) {
         ApiResponse<String> response = new ApiResponse<>();

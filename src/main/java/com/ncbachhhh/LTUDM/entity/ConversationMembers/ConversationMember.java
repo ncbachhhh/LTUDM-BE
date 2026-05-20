@@ -25,6 +25,9 @@ public class ConversationMember {
     @Column(nullable = false)
     private ConversationMemberRole role = ConversationMemberRole.MEMBER;
 
+    @Column(length = 100)
+    private String nickname;
+
     @CreationTimestamp
     @Column(name = "joined_at", updatable = false)
     private LocalDateTime joinedAt;

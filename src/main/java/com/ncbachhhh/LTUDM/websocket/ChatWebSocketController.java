@@ -1,10 +1,12 @@
 package com.ncbachhhh.LTUDM.websocket;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
+import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
+import com.ncbachhhh.LTUDM.service.ConversationService;
 import com.ncbachhhh.LTUDM.service.MessageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.security.Principal;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ChatWebSocketController {
     MessageService messageService;
+    ConversationService conversationService;
     SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/chat/{conversationId}")
@@ -39,12 +42,14 @@ public class ChatWebSocketController {
         MessageResponse savedMessage = messageService.sendMessage(request, senderId);
 
         messagingTemplate.convertAndSend("/topic/conversation/" + conversationId, savedMessage);
+        sendConversationPreviewToMembers(conversationId);
     }
 
     @MessageMapping("/chat/{conversationId}/read")
     public void markAsRead(@DestinationVariable String conversationId, Principal principal) {
         String userId = requireUserId(principal);
         messageService.markAllAsRead(conversationId, userId);
+        sendConversationPreviewToUser(conversationId, userId);
         messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", "Đã đánh dấu tin nhắn là đã đọc.");
     }
 
@@ -70,6 +75,16 @@ public class ChatWebSocketController {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         return principal.getName();
+    }
+
+    private void sendConversationPreviewToMembers(String conversationId) {
+        conversationService.getConversationMemberIds(conversationId)
+                .forEach(memberId -> sendConversationPreviewToUser(conversationId, memberId));
+    }
+
+    private void sendConversationPreviewToUser(String conversationId, String userId) {
+        ConversationResponse preview = conversationService.getConversationPreviewForUser(conversationId, userId);
+        messagingTemplate.convertAndSendToUser(userId, "/queue/conversations", preview);
     }
 
     public record TypingIndicator(String userId, String displayName, boolean isTyping) {
