@@ -13,8 +13,8 @@ spring:
     password: ${MYSQL_PASSWORD}
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 100MB
+      max-request-size: 100MB
   data:
     redis:
       host: ${REDIS_HOST:localhost}

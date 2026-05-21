@@ -35,6 +35,7 @@ public interface MessageMapper {
     void updateMessage(MessageRequest request, @MappingTarget Message message);
 
     @Mapping(target = "read", ignore = true)
+    @Mapping(target = "attachment", ignore = true)
     MessageResponse toMessageResponse(Message message);
 
     List<MessageResponse> toMessageResponseList(List<Message> messages);

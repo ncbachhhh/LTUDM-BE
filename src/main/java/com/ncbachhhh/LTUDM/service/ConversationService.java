@@ -3,17 +3,20 @@ package com.ncbachhhh.LTUDM.service;
 import com.ncbachhhh.LTUDM.dto.request.AddConversationMembersRequest;
 import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
+import com.ncbachhhh.LTUDM.dto.response.AttachmentResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoStatResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationMemberResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
+import com.ncbachhhh.LTUDM.entity.Attachment.Attachment;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMemberRole;
 import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.Key.ConversationMemberId;
+import com.ncbachhhh.LTUDM.entity.Key.MessageReceiptId;
 import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import com.ncbachhhh.LTUDM.entity.Message.Message;
 import com.ncbachhhh.LTUDM.entity.User.User;
@@ -21,6 +24,7 @@ import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationRepository;
+import com.ncbachhhh.LTUDM.repository.AttachmentRepository;
 import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
@@ -54,6 +58,7 @@ public class ConversationService {
     MessageRepository messageRepository;
     MessageReceiptRepository messageReceiptRepository;
     MessageDeletionRepository messageDeletionRepository;
+    AttachmentRepository attachmentRepository;
     UserRepository userRepository;
     FriendshipRepository friendshipRepository;
 
@@ -386,7 +391,20 @@ public class ConversationService {
         response.setRecalledAt(message.getRecalledAt());
         response.setRecalledBy(message.getRecalledBy());
         response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));
+        response.setAttachment(attachmentRepository.findByMessageId(message.getId())
+                .map(this::toAttachmentResponse)
+                .orElse(null));
         return response;
+    }
+
+    private AttachmentResponse toAttachmentResponse(Attachment attachment) {
+        return AttachmentResponse.builder()
+                .id(attachment.getId())
+                .fileUrl(attachment.getFileUrl())
+                .fileName(attachment.getFileName())
+                .mimeType(attachment.getMimeType())
+                .fileSize(attachment.getFileSize())
+                .build();
     }
 
     // Lấy conversation hoặc ném lỗi nếu không tồn tại

@@ -8,6 +8,7 @@ import com.ncbachhhh.LTUDM.service.FriendshipService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,6 +46,32 @@ public class FriendshipController {
         return ApiResponse.<FriendshipResponse>builder()
                 .code(ErrorCode.SUCCESS.getCode())
                 .data(friendshipService.declineRequest(friendshipId))
+                .build();
+    }
+
+    @DeleteMapping("/requests/{friendshipId}")
+    ApiResponse<String> withdrawRequest(@PathVariable String friendshipId) {
+        friendshipService.withdrawRequest(friendshipId);
+        return ApiResponse.<String>builder()
+                .code(ErrorCode.SUCCESS.getCode())
+                .data("Da thu hoi loi moi ket ban.")
+                .build();
+    }
+
+    @DeleteMapping("/{friendshipId}")
+    ApiResponse<String> deleteFriend(@PathVariable String friendshipId) {
+        friendshipService.deleteFriend(friendshipId);
+        return ApiResponse.<String>builder()
+                .code(ErrorCode.SUCCESS.getCode())
+                .data("Da xoa ban be.")
+                .build();
+    }
+
+    @PostMapping("/blocks/{userId}")
+    ApiResponse<FriendshipResponse> blockUser(@PathVariable String userId) {
+        return ApiResponse.<FriendshipResponse>builder()
+                .code(ErrorCode.SUCCESS.getCode())
+                .data(friendshipService.blockUser(userId))
                 .build();
     }
 

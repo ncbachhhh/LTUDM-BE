@@ -18,6 +18,7 @@ public class MessageResponse {
 
     private MessageType type;
     private String content;
+    private AttachmentResponse attachment;
 
     @JsonProperty("created_at")
     private LocalDateTime createdAt;

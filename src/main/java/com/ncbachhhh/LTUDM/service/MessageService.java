@@ -1,7 +1,9 @@
 package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
+import com.ncbachhhh.LTUDM.dto.response.AttachmentResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
+import com.ncbachhhh.LTUDM.entity.Attachment.Attachment;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
@@ -15,6 +17,7 @@ import com.ncbachhhh.LTUDM.entity.MessageReceipt.MessageReceipt;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.MessageMapper;
+import com.ncbachhhh.LTUDM.repository.AttachmentRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationRepository;
 import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
@@ -35,7 +38,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +52,7 @@ public class MessageService {
     ConversationMemberRepository conversationMemberRepository;
     ConversationRepository conversationRepository;
     FriendshipRepository friendshipRepository;
+    AttachmentRepository attachmentRepository;
     MessageMapper messageMapper;
     R2StorageService r2StorageService;
 
@@ -68,7 +74,7 @@ public class MessageService {
         return sendMessage(request, null, senderId);
     }
 
-    public MessageResponse sendMessage(MessageRequest request, MultipartFile imageFile, String senderId) {
+    public MessageResponse sendMessage(MessageRequest request, MultipartFile file, String senderId) {
         if (!StringUtils.hasText(senderId)) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
@@ -79,22 +85,29 @@ public class MessageService {
         if (message.getType() == null) {
             message.setType(MessageType.TEXT);
         }
-        message.setContent(resolveMessageContent(request, imageFile, senderId, message.getType()));
+        message.setContent(resolveMessageContent(request, file, senderId, message.getType()));
 
-        return toMessageResponse(messageRepository.save(message), senderId);
+        Message savedMessage = messageRepository.save(message);
+        Attachment attachment = createAttachmentIfNeeded(savedMessage, file);
+
+        return toMessageResponse(savedMessage, senderId, attachment);
     }
 
     private String resolveMessageContent(
             MessageRequest request,
-            MultipartFile imageFile,
+            MultipartFile file,
             String senderId,
             MessageType messageType
     ) {
         if (messageType == MessageType.IMAGE) {
-            return r2StorageService.uploadMessageImage(request.getConversationId(), senderId, imageFile);
+            return r2StorageService.uploadMessageImage(request.getConversationId(), senderId, file);
         }
 
-        if (imageFile != null && !imageFile.isEmpty()) {
+        if (messageType == MessageType.FILE) {
+            return r2StorageService.uploadMessageFile(request.getConversationId(), senderId, file);
+        }
+
+        if (file != null && !file.isEmpty()) {
             throw new AppException(ErrorCode.BAD_REQUEST);
         }
 
@@ -113,8 +126,9 @@ public class MessageService {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Message> messages = messageRepository.findVisibleMessagesByConversationPaged(conversationId, userId, pageable);
+        Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messages.getContent());
         List<MessageResponse> content = messages.getContent().stream()
-                .map(message -> toMessageResponse(message, userId))
+                .map(message -> toMessageResponse(message, userId, attachmentsByMessageId.get(message.getId())))
                 .toList();
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
@@ -203,9 +217,67 @@ public class MessageService {
 
     // Ánh xạ message entity sang response và bổ sung trạng thái đã đọc
     private MessageResponse toMessageResponse(Message message, String userId) {
+        return toMessageResponse(message, userId, getAttachment(message.getId()));
+    }
+
+    private MessageResponse toMessageResponse(Message message, String userId, Attachment attachment) {
         MessageResponse response = messageMapper.toMessageResponse(message);
         response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));
+        response.setAttachment(toAttachmentResponse(attachment));
         return response;
+    }
+
+    private Attachment createAttachmentIfNeeded(Message message, MultipartFile file) {
+        if (message.getType() != MessageType.IMAGE && message.getType() != MessageType.FILE) {
+            return null;
+        }
+
+        Attachment attachment = new Attachment();
+        attachment.setMessageId(message.getId());
+        attachment.setFileUrl(message.getContent());
+        attachment.setFileName(resolveOriginalFilename(file));
+        attachment.setMimeType(file.getContentType());
+        attachment.setFileSize(file.getSize());
+        return attachmentRepository.save(attachment);
+    }
+
+    private String resolveOriginalFilename(MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (!StringUtils.hasText(originalFilename)) {
+            return "attachment";
+        }
+        return originalFilename.trim();
+    }
+
+    private Attachment getAttachment(String messageId) {
+        return attachmentRepository.findByMessageId(messageId).orElse(null);
+    }
+
+    private Map<String, Attachment> getAttachmentsByMessageId(List<Message> messages) {
+        List<String> messageIds = messages.stream()
+                .filter(message -> message.getType() == MessageType.IMAGE || message.getType() == MessageType.FILE)
+                .map(Message::getId)
+                .toList();
+        if (messageIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return attachmentRepository.findByMessageIdIn(messageIds).stream()
+                .collect(Collectors.toMap(Attachment::getMessageId, attachment -> attachment));
+    }
+
+    private AttachmentResponse toAttachmentResponse(Attachment attachment) {
+        if (attachment == null) {
+            return null;
+        }
+
+        return AttachmentResponse.builder()
+                .id(attachment.getId())
+                .fileUrl(attachment.getFileUrl())
+                .fileName(attachment.getFileName())
+                .mimeType(attachment.getMimeType())
+                .fileSize(attachment.getFileSize())
+                .build();
     }
 
     public void ensureCanAccessConversation(String conversationId, String userId) {

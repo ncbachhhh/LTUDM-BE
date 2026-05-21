@@ -14,6 +14,8 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByEmailIgnoreCase(String email);
+
     User findByUsername(String username);
 
     boolean existsByEmail(String email);
@@ -41,6 +43,23 @@ public interface UserRepository extends JpaRepository<User, String> {
     List<User> searchAcceptedFriendsByName(
             @Param("currentUserId") String currentUserId,
             @Param("name") String name,
+            Pageable pageable);
+
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE u.active = true
+              AND u.id <> :currentUserId
+              AND (
+                    LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                 OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                 OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+            ORDER BY u.displayName ASC, u.username ASC
+            """)
+    List<User> searchUsersForFriendRequest(
+            @Param("currentUserId") String currentUserId,
+            @Param("keyword") String keyword,
             Pageable pageable);
 
 }

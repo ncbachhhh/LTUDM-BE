@@ -70,6 +70,10 @@ public enum ErrorCode {
     INVALID_MESSAGE_IMAGE_FILE_TYPE(400, "Ảnh tin nhắn phải là JPG, PNG, GIF hoặc WEBP"),
     MESSAGE_IMAGE_FILE_TOO_LARGE(400, "Dung lượng ảnh tin nhắn không được vượt quá 10MB"),
     MESSAGE_IMAGE_UPLOAD_FAILED(500, "Upload ảnh tin nhắn thất bại"),
+    MESSAGE_FILE_REQUIRED(400, "Tin nhắn file cần có file đính kèm"),
+    INVALID_MESSAGE_FILE_TYPE(400, "File đính kèm phải là PDF, DOCX, ZIP, TXT hoặc video được hỗ trợ"),
+    MESSAGE_FILE_TOO_LARGE(400, "Dung lượng file đính kèm không được vượt quá 100MB"),
+    MESSAGE_FILE_UPLOAD_FAILED(500, "Upload file đính kèm thất bại"),
     IMAGE_MESSAGE_NOT_SUPPORTED_OVER_WEBSOCKET(400, "Tin nhắn ảnh phải được gửi bằng multipart HTTP request"),
 
     // ===== Server errors =====

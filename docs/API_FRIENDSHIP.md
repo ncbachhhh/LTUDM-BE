@@ -123,7 +123,92 @@ Quy tac validate:
 - Request phai dang `PENDING`.
 - Khong tao conversation.
 
-### 4. Lay loi moi gui den minh
+### 4. Thu hoi loi moi da gui
+
+```http
+DELETE /friendships/requests/{friendshipId}
+```
+
+Quy tac validate:
+
+- Chi nguoi gui request (`requester_id`) moi duoc thu hoi.
+- Request phai dang `PENDING`.
+- Backend xoa record friendship pending.
+
+Response mau:
+
+```json
+{
+  "code": 200,
+  "data": "Da thu hoi loi moi ket ban."
+}
+```
+
+### 5. Xoa ban
+
+```http
+DELETE /friendships/{friendshipId}
+```
+
+Quy tac validate:
+
+- User hien tai phai la `requester_id` hoac `addressee_id`.
+- Friendship phai dang `ACCEPTED`.
+- Backend xoa record friendship. Direct conversation cu khong bi xoa, nhung REST/WebSocket chat direct se khong cho gui/doc/subscribe vi khong con `ACCEPTED`.
+
+Response mau:
+
+```json
+{
+  "code": 200,
+  "data": "Da xoa ban be."
+}
+```
+
+### 6. Chan nguoi dung
+
+```http
+POST /friendships/blocks/{userId}
+```
+
+`userId` la id cua nguoi muon chan.
+
+Quy tac validate:
+
+- Phai dang nhap.
+- Khong duoc chan chinh minh.
+- User bi chan phai ton tai va dang active.
+- Neu da co friendship/request giua 2 user, backend chuyen status sang `BLOCKED`.
+- Neu chua co record, backend tao record moi voi `status = BLOCKED`.
+- Khi status la `BLOCKED`, 2 user khong duoc chat direct theo rule `ACCEPTED`.
+
+Response mau:
+
+```json
+{
+  "code": 200,
+  "data": {
+    "id": "uuid-friendship",
+    "requester_id": "uuid-current-user",
+    "addressee_id": "uuid-target-user",
+    "status": "BLOCKED",
+    "created_at": "2026-05-14T09:00:00",
+    "updated_at": "2026-05-14T09:10:00",
+    "user": {
+      "id": "uuid-target-user",
+      "email": "target@example.com",
+      "username": "target",
+      "display_name": "Target User",
+      "avatar_url": null,
+      "friendship_status": "BLOCKED",
+      "friendship_direction": "NONE"
+    },
+    "conversation": null
+  }
+}
+```
+
+### 7. Lay loi moi gui den minh
 
 ```http
 GET /friendships/requests/incoming
@@ -131,7 +216,7 @@ GET /friendships/requests/incoming
 
 Tra ve cac request `PENDING` ma user hien tai la `addressee_id`.
 
-### 5. Lay loi moi minh da gui
+### 8. Lay loi moi minh da gui
 
 ```http
 GET /friendships/requests/outgoing
@@ -139,7 +224,7 @@ GET /friendships/requests/outgoing
 
 Tra ve cac request `PENDING` ma user hien tai la `requester_id`.
 
-### 6. Lay danh sach ban be
+### 9. Lay danh sach ban be
 
 ```http
 GET /friendships
@@ -147,7 +232,7 @@ GET /friendships
 
 Tra ve cac friendship co status `ACCEPTED` lien quan den user hien tai.
 
-### 7. Tim kiem ban be cua toi theo ten
+### 10. Tim kiem ban be cua toi theo ten
 
 ```http
 GET /friendships/search?name={name}
@@ -195,8 +280,10 @@ Response mau:
 | 400 | 400 | Khong the ket ban voi chinh minh |
 | 400 | 400 | Yeu cau ket ban da ton tai |
 | 400 | 400 | Yeu cau ket ban khong con cho xu ly |
+| 400 | 400 | Hai nguoi dung chua la ban be |
 | 401 | 401 | Chua dang nhap |
 | 403 | 403 | Ban khong co quyen xu ly yeu cau ket ban nay |
+| 403 | 403 | Khong co quyen truy cap tai nguyen nay |
 | 403 | 403 | Hai nguoi dung chua ket ban |
 | 404 | 404 | Khong tim thay yeu cau ket ban |
 | 404 | 404 | Khong tim thay nguoi dung |

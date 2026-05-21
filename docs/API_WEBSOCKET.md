@@ -1,4 +1,4 @@
-# Tài Liệu WebSocket - Realtime Chat
+# Tai lieu WebSocket - Realtime Chat
 
 Base URL:
 
@@ -11,9 +11,15 @@ WebSocket endpoint:
 - Native WebSocket: `ws://localhost:8080/api/v1/ws`
 - SockJS endpoint: `http://localhost:8080/api/v1/ws`
 
-## 1. Kết nối WebSocket
+## 1. Ket noi WebSocket
 
-### Cách 1. `@stomp/stompjs` với native WebSocket
+Header bat buoc khi CONNECT:
+
+| Key | Value |
+|-----|-------|
+| Authorization | Bearer {accessToken} |
+
+Vi du `@stomp/stompjs` voi native WebSocket:
 
 ```javascript
 import { Client } from '@stomp/stompjs';
@@ -26,49 +32,35 @@ const client = new Client({
 });
 ```
 
-### Cách 2. `@stomp/stompjs` kết hợp `sockjs-client`
-
-```javascript
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
-
-const client = new Client({
-  webSocketFactory: () => new SockJS('http://localhost:8080/api/v1/ws'),
-  connectHeaders: {
-    Authorization: `Bearer ${accessToken}`,
-  },
-});
-```
-
-Header bắt buộc:
-
-| Key | Value |
-|-----|-------|
-| Authorization | Bearer {accessToken} |
-
 ## 2. Subscribe
 
-### 2.1 Nhận tin nhắn trong conversation
+### 2.1 Nhan tin nhan trong conversation
 
 ```text
 /topic/conversation/{conversationId}
 ```
 
-### 2.2 Nhận thông báo đã đọc
+### 2.2 Nhan thong bao da doc
 
 ```text
 /topic/conversation/{conversationId}/read
 ```
 
-### 2.3 Nhận typing indicator
+### 2.3 Nhan typing indicator
 
 ```text
 /topic/conversation/{conversationId}/typing
 ```
 
+### 2.4 Nhan conversation preview cua user hien tai
+
+```text
+/user/queue/conversations
+```
+
 ## 3. Send
 
-### 3.1 Gửi tin nhắn text qua STOMP
+### 3.1 Gui tin nhan text qua STOMP
 
 ```text
 /app/chat/{conversationId}
@@ -83,17 +75,16 @@ Payload:
 }
 ```
 
-### 3.2 Gửi ảnh
+### 3.2 Gui anh/file
 
-Ảnh không được đẩy trực tiếp trong STOMP frame. Client cần:
+Anh va file binary khong duoc day truc tiep trong STOMP frame. Client can:
 
-1. Gọi REST `POST /api/v1/messages` với `multipart/form-data`.
-2. Backend upload ảnh lên cloud, lưu message `type = IMAGE`.
-3. Backend broadcast `MessageResponse` mới lên `/topic/conversation/{conversationId}`.
+1. Goi REST `POST /api/v1/messages` voi `multipart/form-data`.
+2. Backend upload file len R2, luu message `type = IMAGE` hoac `type = FILE`.
+3. Backend broadcast `MessageResponse` moi len `/topic/conversation/{conversationId}`.
+4. Backend push conversation preview den `/user/queue/conversations`.
 
-Request:
-
-Part `message`:
+Part `message` khi gui anh:
 
 ```json
 {
@@ -102,15 +93,24 @@ Part `message`:
 }
 ```
 
-Part `file`: file ảnh thực tế.
+Part `message` khi gui file:
 
-### 3.3 Đánh dấu đã đọc
+```json
+{
+  "conversation_id": "uuid-conversation",
+  "type": "FILE"
+}
+```
+
+Part `file`: file can upload.
+
+### 3.3 Danh dau da doc
 
 ```text
 /app/chat/{conversationId}/read
 ```
 
-### 3.4 Đang gõ
+### 3.4 Dang go
 
 ```text
 /app/chat/{conversationId}/typing
@@ -125,13 +125,11 @@ Payload:
 }
 ```
 
-Lưu ý:
-
-- `userId` của typing event được backend lấy từ JWT đã xác thực, không tin từ payload client.
+`userId` cua typing event duoc backend lay tu JWT da xac thuc, khong tin tu payload client.
 
 ## 4. Message format
 
-Message được nhận về từ `/topic/conversation/{conversationId}`:
+Message duoc nhan ve tu `/topic/conversation/{conversationId}`:
 
 ```json
 {
@@ -140,6 +138,7 @@ Message được nhận về từ `/topic/conversation/{conversationId}`:
   "sender_id": "uuid",
   "content": "Hello!",
   "type": "TEXT",
+  "attachment": null,
   "created_at": "2026-03-02T10:30:00",
   "is_read": false,
   "is_edited": false,
@@ -150,25 +149,39 @@ Message được nhận về từ `/topic/conversation/{conversationId}`:
 }
 ```
 
-Nếu là ảnh:
+Neu la `IMAGE` hoac `FILE`:
 
-- `type = IMAGE`
-- `content` là public URL của ảnh sau khi upload thành công.
-
-Typing event:
+- `content` la public URL cua file sau khi upload thanh cong.
+- `attachment` chua metadata file.
 
 ```json
 {
-  "userId": "uuid",
-  "displayName": "John",
-  "isTyping": true
+  "id": "uuid",
+  "conversation_id": "uuid",
+  "sender_id": "uuid",
+  "content": "https://public-r2-domain/messages/conversation/sender/files/random.pdf",
+  "type": "FILE",
+  "attachment": {
+    "id": "uuid-attachment",
+    "file_url": "https://public-r2-domain/messages/conversation/sender/files/random.pdf",
+    "file_name": "document.pdf",
+    "mime_type": "application/pdf",
+    "file_size": 123456
+  },
+  "created_at": "2026-03-02T10:30:00",
+  "is_read": false,
+  "is_edited": false,
+  "edited_at": null,
+  "is_recalled": false,
+  "recalled_at": null,
+  "recalled_by": null
 }
 ```
 
-## 5. Ghi chú
+## 5. Ghi chu
 
-- STOMP app prefix là `/app`.
-- Broker prefix là `/topic` và `/queue`.
-- Token được xác thực tại frame `CONNECT`.
-- Nếu token hết hạn, client phải reconnect với token mới.
-- Chat realtime hiện hỗ trợ đầy đủ cho text qua STOMP và cho ảnh theo mô hình REST upload + STOMP broadcast.
+- STOMP app prefix la `/app`.
+- Broker prefix la `/topic` va `/queue`.
+- Token duoc xac thuc tai frame `CONNECT`.
+- Neu token het han, client phai reconnect voi token moi.
+- Chat realtime ho tro text qua STOMP; anh/file dung REST upload + STOMP broadcast.

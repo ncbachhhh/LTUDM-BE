@@ -91,13 +91,26 @@ public class UserService {
         String currentUserId = getCurrentUserId();
         String normalizedEmail = normalizeEmail(email);
 
-        User user = userRepository.findByEmail(normalizedEmail)
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         if (currentUserId.equals(user.getId()) || !user.isActive()) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
 
         return toUserProfileResponse(user, currentUserId);
+    }
+
+    public List<UserProfileResponse> searchUsersForFriendRequest(String keyword) {
+        String currentUserId = getCurrentUserId();
+        String normalizedKeyword = normalizeSearchKeyword(keyword);
+
+        return userRepository.searchUsersForFriendRequest(
+                        currentUserId,
+                        normalizedKeyword,
+                        PageRequest.of(0, 20))
+                .stream()
+                .map(user -> toUserProfileResponse(user, currentUserId))
+                .toList();
     }
 
     public UserProfileResponse getUserProfile(String userId) {
@@ -163,6 +176,13 @@ public class UserService {
             throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
         }
         return email.trim().toLowerCase();
+    }
+
+    private String normalizeSearchKeyword(String keyword) {
+        if (!StringUtils.hasText(keyword) || keyword.trim().length() < 2) {
+            throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
+        }
+        return keyword.trim();
     }
 
     private UserProfileResponse toUserProfileResponse(User user, String currentUserId) {

@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -52,6 +54,15 @@ public class UserController {
     ApiResponse<UserProfileResponse> searchUserByEmail(@RequestParam("email") String email) {
         ApiResponse<UserProfileResponse> response = new ApiResponse<>();
         response.setData(userService.searchUserByEmail(email));
+        response.setCode(ErrorCode.SUCCESS.getCode());
+
+        return response;
+    }
+
+    @GetMapping("/search")
+    ApiResponse<List<UserProfileResponse>> searchUsersForFriendRequest(@RequestParam("keyword") String keyword) {
+        ApiResponse<List<UserProfileResponse>> response = new ApiResponse<>();
+        response.setData(userService.searchUsersForFriendRequest(keyword));
         response.setCode(ErrorCode.SUCCESS.getCode());
 
         return response;

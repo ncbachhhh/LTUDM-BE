@@ -78,6 +78,49 @@ public class FriendshipService {
         return toResponse(friendshipRepository.save(friendship), currentUserId, null);
     }
 
+    @Transactional
+    public void withdrawRequest(String friendshipId) {
+        String currentUserId = getCurrentUserId();
+        Friendship friendship = getFriendship(friendshipId);
+
+        if (!friendship.getRequesterId().equals(currentUserId)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        if (friendship.getStatus() != FriendshipStatus.PENDING) {
+            throw new AppException(ErrorCode.FRIENDSHIP_REQUEST_NOT_PENDING);
+        }
+
+        friendshipRepository.delete(friendship);
+    }
+
+    @Transactional
+    public void deleteFriend(String friendshipId) {
+        String currentUserId = getCurrentUserId();
+        Friendship friendship = getFriendship(friendshipId);
+
+        ensureFriendshipParticipant(friendship, currentUserId);
+        if (friendship.getStatus() != FriendshipStatus.ACCEPTED) {
+            throw new AppException(ErrorCode.NOT_FRIENDS);
+        }
+
+        friendshipRepository.delete(friendship);
+    }
+
+    @Transactional
+    public FriendshipResponse blockUser(String userId) {
+        String currentUserId = getCurrentUserId();
+        validateTargetUser(currentUserId, userId);
+
+        Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, userId)
+                .orElseGet(Friendship::new);
+
+        friendship.setRequesterId(currentUserId);
+        friendship.setAddresseeId(userId);
+        friendship.setStatus(FriendshipStatus.BLOCKED);
+
+        return toResponse(friendshipRepository.save(friendship), currentUserId, null);
+    }
+
     public List<FriendshipResponse> getIncomingRequests() {
         String currentUserId = getCurrentUserId();
         return friendshipRepository.findByAddresseeId(currentUserId).stream()
@@ -149,6 +192,13 @@ public class FriendshipService {
         }
         if (friendship.getStatus() != FriendshipStatus.PENDING) {
             throw new AppException(ErrorCode.FRIENDSHIP_REQUEST_NOT_PENDING);
+        }
+    }
+
+    private void ensureFriendshipParticipant(Friendship friendship, String currentUserId) {
+        if (!friendship.getRequesterId().equals(currentUserId)
+                && !friendship.getAddresseeId().equals(currentUserId)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
         }
     }
 

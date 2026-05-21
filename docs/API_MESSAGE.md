@@ -1,4 +1,4 @@
-# Tài Liệu API - Message
+# Tai lieu API - Message
 
 Base URL:
 
@@ -6,17 +6,24 @@ Base URL:
 http://localhost:8080/api/v1
 ```
 
+Tat ca endpoint yeu cau:
+
+```http
+Authorization: Bearer {accessToken}
+```
+
 ## Endpoint
 
-### 1. Upload và gửi tin nhắn ảnh
+### 1. Upload va gui tin nhan anh/file
 
 ```http
 POST /messages
+Content-Type: multipart/form-data
 ```
 
-Endpoint này chỉ nhận `multipart/form-data` để gửi ảnh. Tin nhắn `TEXT` được gửi qua WebSocket `/app/chat/{conversationId}`.
+Endpoint nay dung de gui message co file binary. Tin nhan `TEXT` van gui qua WebSocket `/app/chat/{conversationId}`.
 
-Part `message`:
+Part `message` khi gui anh:
 
 ```json
 {
@@ -25,14 +32,28 @@ Part `message`:
 }
 ```
 
-Part `file`: file ảnh thực tế (`image/jpeg`, `image/png`, `image/gif`, `image/webp`).
+Part `message` khi gui file:
 
-`type` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
+```json
+{
+  "conversation_id": "uuid-conversation",
+  "type": "FILE"
+}
+```
 
-Với `IMAGE`, backend sẽ upload file lên cloud và lưu URL vào `content`.
-Sau khi lưu thành công, backend cũng broadcast realtime message mới lên topic `/topic/conversation/{conversation_id}`.
+Part `file`: file can upload.
 
-Response:
+Loai file ho tro:
+
+- Anh: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, toi da 10MB.
+- Tai lieu: `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/zip`, `application/x-zip-compressed`, `text/plain`.
+- Video: `video/mp4`, `video/webm`, `video/quicktime`, `video/x-msvideo`, `video/x-matroska`.
+- File tai lieu/video toi da 100MB.
+
+Voi `IMAGE` hoac `FILE`, backend upload file len R2, luu URL vao `messages.content`, va luu metadata vao bang `attachments`.
+Sau khi luu thanh cong, backend broadcast message moi len `/topic/conversation/{conversation_id}` va push conversation preview den `/user/queue/conversations`.
+
+Response mau:
 
 ```json
 {
@@ -41,8 +62,15 @@ Response:
     "id": "uuid-message",
     "conversation_id": "uuid-conversation",
     "sender_id": "uuid-sender",
-    "type": "TEXT",
-    "content": "Nội dung tin nhắn",
+    "type": "FILE",
+    "content": "https://public-r2-domain/messages/uuid-conversation/uuid-sender/files/random.pdf",
+    "attachment": {
+      "id": "uuid-attachment",
+      "file_url": "https://public-r2-domain/messages/uuid-conversation/uuid-sender/files/random.pdf",
+      "file_name": "document.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 123456
+    },
     "created_at": "2026-03-12T10:30:00",
     "is_read": false,
     "is_edited": false,
@@ -54,7 +82,7 @@ Response:
 }
 ```
 
-### 2. Lấy tin nhắn với phân trang
+### 2. Lay tin nhan voi phan trang
 
 ```http
 GET /messages/conversation/{conversationId}/paged?page=0&size=20
@@ -62,117 +90,66 @@ GET /messages/conversation/{conversationId}/paged?page=0&size=20
 
 Query parameters:
 
-- `page`: số trang, mặc định `0`.
-- `size`: số bản ghi, mặc định `20`.
+- `page`: so trang, mac dinh `0`.
+- `size`: so ban ghi, mac dinh `20`.
 
-### 3. Đánh dấu một tin nhắn đã đọc
+Response message `IMAGE`/`FILE` co them field `attachment`; message text co `attachment: null`.
+
+### 3. Danh dau mot tin nhan da doc
 
 ```http
 PUT /messages/{messageId}/read
 ```
 
-Response:
-
-```json
-{
-  "code": 200,
-  "data": "Đã đánh dấu tin nhắn là đã đọc."
-}
-```
-
-### 4. Đánh dấu toàn bộ tin nhắn trong conversation đã đọc
+### 4. Danh dau toan bo tin nhan trong conversation da doc
 
 ```http
 PUT /messages/conversation/{conversationId}/read-all
 ```
 
-Response:
-
-```json
-{
-  "code": 200,
-  "data": "Đã đánh dấu toàn bộ tin nhắn là đã đọc."
-}
-```
-
-### 5. Xóa tin nhắn phía cá nhân
+### 5. Xoa tin nhan phia ca nhan
 
 ```http
 DELETE /messages/{messageId}
 ```
 
-Lưu ý:
+Luu y:
 
-- Đây là xóa phía cá nhân, được lưu qua bảng `message_deletions`.
-- Bản ghi trong `messages` không bị xóa cứng.
-- Tin nhắn đã xóa với user hiện tại sẽ không còn xuất hiện trong danh sách của user đó.
+- Day la xoa phia ca nhan, duoc luu qua bang `message_deletions`.
+- Ban ghi trong `messages` khong bi xoa cung.
+- Tin nhan da xoa voi user hien tai se khong con xuat hien trong danh sach cua user do.
 
-Response:
-
-```json
-{
-  "code": 200,
-  "data": "Đã xóa tin nhắn."
-}
-```
-
-### 6. Đếm số tin nhắn chưa đọc
+### 6. Dem so tin nhan chua doc
 
 ```http
 GET /messages/conversation/{conversationId}/unread-count
 ```
 
-Response:
-
-```json
-{
-  "code": 200,
-  "data": 5
-}
-```
-
-### 7. Lấy tin nhắn mới nhất
+### 7. Lay tin nhan moi nhat
 
 ```http
 GET /messages/conversation/{conversationId}/latest
 ```
 
-Response:
+## Ghi chu nghiep vu
 
-```json
-{
-  "code": 200,
-  "data": {
-    "id": "uuid-message",
-    "conversation_id": "uuid-conversation",
-    "sender_id": "uuid-sender",
-    "type": "TEXT",
-    "content": "Tin nhắn mới nhất",
-    "created_at": "2026-03-12T10:35:00",
-    "is_read": false,
-    "is_edited": false,
-    "edited_at": null,
-    "is_recalled": false,
-    "recalled_at": null,
-    "recalled_by": null
-  }
-}
-```
+- `is_read` trong response duoc suy ra tu bang `message_receipts`, khong nam truc tiep tren bang `messages`.
+- Xoa tin nhan phia ca nhan duoc luu o bang `message_deletions`.
+- File metadata duoc luu o bang `attachments`; `messages.content` van la URL file de giu tuong thich response cu.
+- `IMAGE` va `FILE` khong gui binary qua WebSocket; phai gui bang multipart REST.
+- Schema hien co san cac cot recall/edit tren `messages`, nhung service chua implement edit/recall.
 
-## Ghi chú nghiệp vụ
-
-- `is_read` trong response được suy ra từ bảng `message_receipts`, không nằm trực tiếp trên bảng `messages`.
-- Xóa tin nhắn phía cá nhân được lưu ở bảng `message_deletions`.
-- Schema hiện có sẵn các cột recall/edit trên `messages`, nhưng tài liệu này mới phản ánh trạng thái response hiện tại của backend.
-
-## Mã lỗi
+## Ma loi
 
 | Code | Message |
 |------|---------|
-| 400 | Nội dung tin nhắn không được để trống |
-| 400 | Tin nhắn ảnh cần có file ảnh |
-| 400 | Ảnh tin nhắn phải là JPG, PNG, GIF hoặc WEBP |
-| 400 | Dung lượng ảnh tin nhắn không được vượt quá 10MB |
-| 404 | Không tìm thấy tin nhắn |
-| 404 | Không tìm thấy đoạn chat |
-| 403 | Bạn không phải thành viên của đoạn chat này |
+| 400 | Noi dung tin nhan khong duoc de trong |
+| 400 | Tin nhan anh can co file anh |
+| 400 | Anh tin nhan phai la JPG, PNG, GIF hoac WEBP |
+| 400 | Dung luong anh tin nhan khong duoc vuot qua 10MB |
+| 400 | Tin nhan file can co file dinh kem |
+| 400 | File dinh kem phai la PDF, DOCX, ZIP, TXT hoac video duoc ho tro |
+| 400 | Dung luong file dinh kem khong duoc vuot qua 100MB |
+| 403 | Ban khong phai thanh vien cua doan chat nay |
+| 404 | Khong tim thay tin nhan |
+| 404 | Khong tim thay doan chat |
