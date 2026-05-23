@@ -5,9 +5,9 @@ import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
-import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.UserService;
 import jakarta.validation.Valid;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.MediaType;
@@ -27,73 +27,53 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserController {
     UserService userService;
 
     @PatchMapping("/{userId}")
     @PreAuthorize("@userSecurity.isOwner(authentication, #userId)")
-    ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId, @RequestBody @Valid UserUpdateRequest request) {
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setData(userService.updateUser(userId, request));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+    ApiResponse<UserResponse> updateUser(
+            @PathVariable("userId") String userId,
+            @RequestBody @Valid UserUpdateRequest request) {
+        return success(userService.updateUser(userId, request));
     }
 
     @GetMapping("/me")
     ApiResponse<UserResponse> getMyInfo() {
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setData(userService.getMyInfo());
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+        return success(userService.getMyInfo());
     }
 
     @GetMapping("/search-by-email")
     ApiResponse<UserProfileResponse> searchUserByEmail(@RequestParam("email") String email) {
-        ApiResponse<UserProfileResponse> response = new ApiResponse<>();
-        response.setData(userService.searchUserByEmail(email));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+        return success(userService.searchUserByEmail(email));
     }
 
     @GetMapping("/search")
     ApiResponse<List<UserProfileResponse>> searchUsersForFriendRequest(@RequestParam("keyword") String keyword) {
-        ApiResponse<List<UserProfileResponse>> response = new ApiResponse<>();
-        response.setData(userService.searchUsersForFriendRequest(keyword));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+        return success(userService.searchUsersForFriendRequest(keyword));
     }
 
     @GetMapping("/{userId}/profile")
     ApiResponse<UserProfileResponse> getUserProfile(@PathVariable("userId") String userId) {
-        ApiResponse<UserProfileResponse> response = new ApiResponse<>();
-        response.setData(userService.getUserProfile(userId));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+        return success(userService.getUserProfile(userId));
     }
 
     @PatchMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<UserResponse> updateMyAvatar(@RequestParam("file") MultipartFile file) {
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setData(userService.updateMyAvatar(file));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+        return success(userService.updateMyAvatar(file));
     }
 
     @PostMapping("/me/change-password")
     ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
-        ApiResponse<String> response = new ApiResponse<>();
         userService.changePassword(request);
-        response.setData("Đổi mật khẩu thành công.");
-        response.setCode(ErrorCode.SUCCESS.getCode());
-
-        return response;
+        return success("Password changed successfully.");
     }
 
+    private <T> ApiResponse<T> success(T data) {
+        return ApiResponse.<T>builder()
+                .code(200)
+                .data(data)
+                .build();
+    }
 }

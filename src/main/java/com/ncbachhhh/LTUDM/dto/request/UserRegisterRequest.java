@@ -31,8 +31,5 @@ public class UserRegisterRequest {
     @Size(max = 100, message = "INVALID_DISPLAY_NAME_FORMAT")
     String displayName;
 
-//    @JsonProperty("avatar_url")
-//    String avatarUrl;
-
     UserRole role;
 }

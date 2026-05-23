@@ -39,6 +39,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      MYSQL_URL: jdbc:mysql://mysql:3306/LTUDM?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     depends_on:
       mysql:
         condition: service_healthy

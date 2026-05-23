@@ -50,7 +50,7 @@ public class ChatWebSocketController {
         String userId = requireUserId(principal);
         messageService.markAllAsRead(conversationId, userId);
         sendConversationPreviewToUser(conversationId, userId);
-        messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", "Đã đánh dấu tin nhắn là đã đọc.");
+        messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", "Messages marked as read.");
     }
 
     @MessageMapping("/chat/{conversationId}/typing")

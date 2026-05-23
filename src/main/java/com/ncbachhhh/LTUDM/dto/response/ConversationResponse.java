@@ -38,5 +38,17 @@ public class ConversationResponse {
     @JsonProperty("unread_count")
     long unreadCount;
 
+    @JsonProperty("friendship_status")
+    String friendshipStatus;
+
+    @JsonProperty("friendship_direction")
+    String friendshipDirection;
+
+    @JsonProperty("blocked_by_current_user")
+    boolean blockedByCurrentUser;
+
+    @JsonProperty("current_user_blocked")
+    boolean currentUserBlocked;
+
     List<ConversationMemberResponse> members;
 }

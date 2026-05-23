@@ -5,14 +5,11 @@ import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
-import com.ncbachhhh.LTUDM.entity.Friendship.Friendship;
-import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.entity.User.UserRole;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.UserMapper;
-import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +28,11 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserService {
     UserRepository userRepository;
-    FriendshipRepository friendshipRepository;
+    PresenceService presenceService;
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
     R2StorageService r2StorageService;
+    RelationshipService relationshipService;
 
     public UserResponse createUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -186,29 +184,17 @@ public class UserService {
     }
 
     private UserProfileResponse toUserProfileResponse(User user, String currentUserId) {
-        Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, user.getId()).orElse(null);
+        RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, user.getId());
+
         return UserProfileResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
                 .avatarUrl(user.getAvatarUrl())
-                .friendshipStatus(resolveFriendshipStatus(friendship, currentUserId))
-                .friendshipDirection(resolveFriendshipDirection(friendship, currentUserId))
+                .friendshipStatus(relationship.status())
+                .friendshipDirection(relationship.direction())
+                .online(presenceService.isOnline(user.getId()))
                 .build();
-    }
-
-    private String resolveFriendshipStatus(Friendship friendship, String currentUserId) {
-        if (friendship == null) {
-            return "NONE";
-        }
-        return friendship.getStatus().name();
-    }
-
-    private String resolveFriendshipDirection(Friendship friendship, String currentUserId) {
-        if (friendship == null || friendship.getStatus() != FriendshipStatus.PENDING) {
-            return "NONE";
-        }
-        return friendship.getRequesterId().equals(currentUserId) ? "OUTGOING" : "INCOMING";
     }
 }

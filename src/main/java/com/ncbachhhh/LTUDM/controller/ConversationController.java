@@ -6,21 +6,20 @@ import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
-import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.ConversationService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
 
 @RestController
@@ -30,61 +29,46 @@ import java.util.List;
 public class ConversationController {
     ConversationService conversationService;
 
-    // GET /conversations/me - Lấy danh sách conversation của user hiện tại (userId từ token)
     @GetMapping("/me")
     ApiResponse<List<ConversationResponse>> getMyConversations() {
-        ApiResponse<List<ConversationResponse>> response = new ApiResponse<>();
-        response.setData(conversationService.getMyConversations());
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(conversationService.getMyConversations());
     }
 
     @GetMapping("/{conversationId}/info")
     ApiResponse<ConversationInfoResponse> getConversationInfo(@PathVariable String conversationId) {
-        ApiResponse<ConversationInfoResponse> response = new ApiResponse<>();
-        response.setData(conversationService.getConversationInfo(conversationId));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(conversationService.getConversationInfo(conversationId));
     }
 
-    // POST /conversations - Tạo đoạn chat cá nhân hoặc nhóm
     @PostMapping
     ApiResponse<ConversationResponse> createConversation(@RequestBody @Valid CreateConversationRequest request) {
-        ApiResponse<ConversationResponse> response = new ApiResponse<>();
-        response.setData(conversationService.createConversation(request));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(conversationService.createConversation(request));
     }
 
-    // POST /conversations/{conversationId}/members - Thêm thành viên vào nhóm chat
     @PostMapping("/{conversationId}/members")
     ApiResponse<ConversationResponse> addMembers(
             @PathVariable String conversationId,
             @RequestBody @Valid AddConversationMembersRequest request) {
-        ApiResponse<ConversationResponse> response = new ApiResponse<>();
-        response.setData(conversationService.addMembers(conversationId, request));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(conversationService.addMembers(conversationId, request));
     }
 
-    // DELETE /conversations/{conversationId} - Xóa nhóm chat
     @PatchMapping("/{conversationId}/members/{memberId}/nickname")
     ApiResponse<ConversationResponse> updateMemberNickname(
             @PathVariable String conversationId,
             @PathVariable String memberId,
             @RequestBody @Valid UpdateConversationNicknameRequest request) {
-        ApiResponse<ConversationResponse> response = new ApiResponse<>();
-        response.setData(conversationService.updateMemberNickname(conversationId, memberId, request));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(conversationService.updateMemberNickname(conversationId, memberId, request));
     }
 
     @DeleteMapping("/{conversationId}")
     ApiResponse<String> deleteGroupConversation(@PathVariable String conversationId) {
-        ApiResponse<String> response = new ApiResponse<>();
         conversationService.deleteGroupConversation(conversationId);
-        response.setData("Đã xóa nhóm chat.");
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success("Group conversation deleted.");
+    }
+
+    private <T> ApiResponse<T> success(T data) {
+        return ApiResponse.<T>builder()
+                .code(200)
+                .data(data)
+                .build();
     }
 }

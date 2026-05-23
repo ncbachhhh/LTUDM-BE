@@ -3,7 +3,11 @@ package com.ncbachhhh.LTUDM.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.util.Date;
@@ -17,7 +21,7 @@ import java.util.Date;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class InvalidatedToken {
     @Id
-    String id; // JWT ID (jti)
+    String id;
 
-    Date expiryTime; // Thời gian hết hạn token (để dọn dẹp DB sau)
+    Date expiryTime;
 }

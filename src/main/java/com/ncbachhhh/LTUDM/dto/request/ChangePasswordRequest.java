@@ -8,10 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-/**
- * DTO request cho việc đổi mật khẩu.
- * Yêu cầu mật khẩu cũ để xác thực và mật khẩu mới + confirm.
- */
 @Data
 @Builder
 @NoArgsConstructor

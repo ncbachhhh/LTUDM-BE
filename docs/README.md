@@ -1,85 +1,65 @@
-# Tài Liệu LTUDM Backend
+# LTUDM Backend Documentation
 
-Cập nhật lần cuối: 2026-05-13
+Tai lieu nay mo ta backend hien tai sau khi clean code. Tat ca endpoint REST deu co base URL:
 
-## Danh sách tài liệu
+```text
+http://localhost:8080/api/v1
+```
 
-| File | Mô tả |
-|------|------|
-| [API_USER.md](./API_USER.md) | API xác thực, user và upload avatar |
-| [API_FORGOT_PASSWORD.md](./API_FORGOT_PASSWORD.md) | API quên mật khẩu bằng OTP qua email |
-| [API_FILE_UPLOAD.md](./API_FILE_UPLOAD.md) | Cơ chế upload file lên Cloudflare R2 và cách tái sử dụng trong code |
-| [API_MESSAGE.md](./API_MESSAGE.md) | API tin nhắn |
-| [API_CONVERSATION.md](./API_CONVERSATION.md) | API tạo và quản lý đoạn chat |
-| [API_FRIENDSHIP.md](./API_FRIENDSHIP.md) | API ket ban, incoming/outgoing request va rule chi ban be moi chat |
-| [API_WEBSOCKET.md](./API_WEBSOCKET.md) | WebSocket cho realtime chat |
-| [CHAT_STEP_BY_STEP.md](./CHAT_STEP_BY_STEP.md) | Hướng dẫn test luồng chat cơ bản từng bước |
+Mac dinh server chay port `8080`, context path `/api/v1`. Cac API ngoai tru `/auth/**` can JWT access token trong header:
 
-## Ghi chú trạng thái hiện tại
+```http
+Authorization: Bearer <access_token>
+```
 
-- `AdminController` vẫn tồn tại trong code nhưng toàn bộ endpoint admin đã bị comment out.
-- JSON request/response đang dùng snake_case ở lớp DTO.
-- Message read status được suy ra từ `message_receipts`.
-- Message delete phía cá nhân được lưu ở `message_deletions`.
-- `MessageType` hiện hỗ trợ: `TEXT`, `IMAGE`, `FILE`, `SYSTEM`.
-- Upload avatar đang dùng Cloudflare R2 thông qua `R2StorageService`.
-- Quên mật khẩu dùng OTP gửi qua email và Redis để lưu OTP, cooldown, attempts, reset token.
+Response chung:
 
-## Quy tắc phân quyền
+```json
+{
+  "code": 200,
+  "message": "optional message",
+  "data": {}
+}
+```
 
-| Endpoint | Quyền yêu cầu | Kiểm tra thêm |
-|----------|---------------|---------------|
-| `POST /auth/*` | Public | - |
-| `GET /users/me` | Đã đăng nhập | - |
-| `PATCH /users/{userId}` | Đã đăng nhập | Chính chủ hoặc admin |
-| `PATCH /users/me/avatar` | Đã đăng nhập | - |
-| `POST /users/me/change-password` | Đã đăng nhập | - |
-| `/admin/*` | Đã tắt | Các endpoint hiện không active |
+Khi loi, `code` trong body la ma business error tu `ErrorCode`, HTTP status duoc map theo code: `400`, `401`, `403`, `404`, hoac `500`.
 
-## Ghi chú database
+## Tai lieu
 
-### users
+- [API Reference](./API_REFERENCE.md): danh sach API REST, request, response, validation va behavior.
+- [Business Flows](./BUSINESS_FLOWS.md): luong xu ly auth, user, friendship, conversation, message, file upload, password reset.
+- [WebSocket](./WEBSOCKET.md): ket noi STOMP, auth, destination, realtime events.
+- [Operations](./OPERATIONS.md): cau hinh moi truong, Redis, MySQL, R2, mail, build va run.
 
-| Column | Type |
-|--------|------|
-| id | CHAR(36) |
-| email | VARCHAR(255) |
-| username | VARCHAR(50) |
-| password_hash | VARCHAR(255) |
-| display_name | VARCHAR(100) |
-| avatar_url | VARCHAR(500) |
-| created_at | DATETIME |
-| role | ENUM('ADMIN', 'USER') |
-| is_active | BOOLEAN |
+## Kien truc package
 
-### messages
+```text
+config       Spring Security, CORS, R2, WebSocket STOMP, WebSocket JWT auth
+controller   REST API layer
+dto          Request/response objects
+entity       JPA entities and composite keys
+exception    ErrorCode, AppException, global exception mapping
+mapper       MapStruct mapper cho User va Message
+repository   Spring Data JPA repositories
+service      Business logic
+websocket    STOMP message controllers and presence events
+```
 
-| Column | Type |
-|--------|------|
-| id | CHAR(36) |
-| conversation_id | CHAR(36) |
-| sender_id | CHAR(36) |
-| type | ENUM('TEXT', 'FILE', 'IMAGE', 'SYSTEM') |
-| content | TEXT |
-| created_at | DATETIME |
-| is_edited | BOOLEAN |
-| edited_at | DATETIME |
-| is_recalled | BOOLEAN |
-| recalled_at | DATETIME |
-| recalled_by | CHAR(36) |
+## Luong request co ban
 
-### message_receipts
+1. Client goi `/auth/login` de lay access token va refresh token.
+2. Client gui REST request co header `Authorization: Bearer <access_token>`.
+3. Spring Security verify JWT bang `jwt.secret`.
+4. Controller nhan request DTO va goi service.
+5. Service kiem tra quyen, validate business rule, thao tac repository/storage/cache.
+6. Controller tra `ApiResponse<T>`.
+7. Neu co loi, service nem `AppException(ErrorCode.X)`, `GlobalExceptionHandler` tra HTTP status va body loi thong nhat.
 
-| Column | Type |
-|--------|------|
-| message_id | CHAR(36) |
-| user_id | CHAR(36) |
-| seen_at | DATETIME |
+## Luong realtime co ban
 
-### message_deletions
-
-| Column | Type |
-|--------|------|
-| message_id | CHAR(36) |
-| user_id | CHAR(36) |
-| deleted_at | DATETIME |
+1. Client ket noi SockJS/STOMP den `/api/v1/ws`.
+2. STOMP `CONNECT` gui native header `Authorization: Bearer <access_token>`.
+3. `WebSocketAuthInterceptor` verify JWT, set principal la `userId`, mark online.
+4. Client subscribe `/topic/conversation/{conversationId}` de nhan message realtime.
+5. Client subscribe `/user/queue/conversations` de nhan conversation preview rieng theo user.
+6. Client subscribe `/topic/presence` de nhan online/offline events.

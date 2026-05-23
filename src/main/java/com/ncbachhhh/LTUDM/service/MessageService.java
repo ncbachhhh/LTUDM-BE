@@ -7,7 +7,6 @@ import com.ncbachhhh.LTUDM.entity.Attachment.Attachment;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
-import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.Key.MessageDeletionId;
 import com.ncbachhhh.LTUDM.entity.Key.MessageReceiptId;
 import com.ncbachhhh.LTUDM.entity.Message.Message;
@@ -20,7 +19,6 @@ import com.ncbachhhh.LTUDM.mapper.MessageMapper;
 import com.ncbachhhh.LTUDM.repository.AttachmentRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationRepository;
-import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
@@ -51,12 +49,11 @@ public class MessageService {
     MessageDeletionRepository messageDeletionRepository;
     ConversationMemberRepository conversationMemberRepository;
     ConversationRepository conversationRepository;
-    FriendshipRepository friendshipRepository;
     AttachmentRepository attachmentRepository;
     MessageMapper messageMapper;
     R2StorageService r2StorageService;
+    RelationshipService relationshipService;
 
-    // Lấy id user hiện tại từ SecurityContext
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -69,7 +66,6 @@ public class MessageService {
         return sendMessage(request, imageFile, getCurrentUserId());
     }
 
-    // Tạo và lưu tin nhắn mới cho conversation
     public MessageResponse sendMessage(MessageRequest request, String senderId) {
         return sendMessage(request, null, senderId);
     }
@@ -78,7 +74,7 @@ public class MessageService {
         if (!StringUtils.hasText(senderId)) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
-        ensureCanAccessConversation(request.getConversationId(), senderId);
+        ensureCanSendMessage(request.getConversationId(), senderId);
 
         Message message = messageMapper.toMessage(request);
         message.setSenderId(senderId);
@@ -119,7 +115,6 @@ public class MessageService {
         return content;
     }
 
-    // Lấy danh sách tin nhắn có phân trang
     public Page<MessageResponse> getMessagesByConversationPaged(String conversationId, int page, int size) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -133,7 +128,6 @@ public class MessageService {
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
 
-    // Đánh dấu một tin nhắn là đã đọc với user hiện tại
     public void markAsRead(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
@@ -153,7 +147,6 @@ public class MessageService {
         }
     }
 
-    // Đánh dấu toàn bộ tin nhắn nhìn thấy được trong conversation là đã đọc
     public void markAllAsRead(String conversationId) {
         markAllAsRead(conversationId, getCurrentUserId());
     }
@@ -179,7 +172,6 @@ public class MessageService {
         }
     }
 
-    // Xóa mềm tin nhắn cho riêng user hiện tại
     public void deleteMessage(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
@@ -195,7 +187,6 @@ public class MessageService {
         }
     }
 
-    // Đếm số tin nhắn chưa đọc trong conversation
     public long countUnreadMessages(String conversationId) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -203,7 +194,6 @@ public class MessageService {
         return messageRepository.countUnreadMessages(conversationId, userId);
     }
 
-    // Lấy tin nhắn mới nhất còn hiển thị với user hiện tại
     public MessageResponse getLatestMessage(String conversationId) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -215,7 +205,6 @@ public class MessageService {
         return toMessageResponse(page.getContent().getFirst(), userId);
     }
 
-    // Ánh xạ message entity sang response và bổ sung trạng thái đã đọc
     private MessageResponse toMessageResponse(Message message, String userId) {
         return toMessageResponse(message, userId, getAttachment(message.getId()));
     }
@@ -288,6 +277,10 @@ public class MessageService {
         if (!conversationMemberRepository.existsByIdConversationIdAndIdUserId(conversationId, userId)) {
             throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
         }
+    }
+
+    private void ensureCanSendMessage(String conversationId, String userId) {
+        ensureCanAccessConversation(conversationId, userId);
         ensureDirectConversationIsBetweenFriends(conversationId, userId);
     }
 
@@ -305,8 +298,6 @@ public class MessageService {
                 .findFirst()
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_DIRECT_CONVERSATION_MEMBERS));
 
-        if (!friendshipRepository.existsBetweenUsersByStatus(userId, otherUserId, FriendshipStatus.ACCEPTED)) {
-            throw new AppException(ErrorCode.NOT_FRIENDS);
-        }
+        relationshipService.ensureAcceptedFriendship(userId, otherUserId);
     }
 }

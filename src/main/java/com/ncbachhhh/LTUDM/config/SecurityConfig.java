@@ -1,6 +1,5 @@
 package com.ncbachhhh.LTUDM.config;
 
-import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +25,12 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final List<String> ALLOWED_METHODS = List.of(
+            "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+    );
 
-    @NonFinal
     @Value("${jwt.secret}")
-    protected String SECRET_KEY;
+    private String secretKey;
 
     @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}")
     private List<String> allowedOrigins;
@@ -43,7 +44,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedMethods(ALLOWED_METHODS);
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setExposedHeaders(List.of("Authorization"));
@@ -95,10 +96,10 @@ public class SecurityConfig {
 
     @Bean
     JwtDecoder jwtDecoder() {
-        SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(), "HS256");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(), "HS256");
 
         return NimbusJwtDecoder
-                .withSecretKey(secretKey)
+                .withSecretKey(secretKeySpec)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
     }

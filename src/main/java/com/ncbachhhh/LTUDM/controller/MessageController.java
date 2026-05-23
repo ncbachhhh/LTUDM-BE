@@ -11,13 +11,21 @@ import com.ncbachhhh.LTUDM.service.MessageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/messages")
@@ -29,77 +37,50 @@ public class MessageController {
     SimpMessagingTemplate messagingTemplate;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    ApiResponse<MessageResponse> sendMessageWithImage(
+    ApiResponse<MessageResponse> sendMessageWithFile(
             @RequestPart("message") MessageRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file) {
         MessageResponse savedMessage = messageService.sendMessage(request, file);
         messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
         sendConversationPreviewToMembers(request.getConversationId());
-        ApiResponse<MessageResponse> response = new ApiResponse<>();
-        response.setData(savedMessage);
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(savedMessage);
     }
 
-    // GET /messages/conversation/{conversationId}/paged - Lấy tin nhắn với phân trang
     @GetMapping("/conversation/{conversationId}/paged")
     ApiResponse<Page<MessageResponse>> getMessagesPaged(
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        ApiResponse<Page<MessageResponse>> response = new ApiResponse<>();
-        response.setData(messageService.getMessagesByConversationPaged(conversationId, page, size));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(messageService.getMessagesByConversationPaged(conversationId, page, size));
     }
 
-    // PUT /messages/{messageId}/read - Đánh dấu tin nhắn đã đọc
     @PutMapping("/{messageId}/read")
     ApiResponse<String> markAsRead(@PathVariable String messageId) {
-        ApiResponse<String> response = new ApiResponse<>();
         messageService.markAsRead(messageId);
-        response.setData("Đã đánh dấu tin nhắn là đã đọc.");
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success("Message marked as read.");
     }
 
-    // PUT /messages/conversation/{conversationId}/read-all - Đánh dấu tất cả tin nhắn đã đọc
     @PutMapping("/conversation/{conversationId}/read-all")
     ApiResponse<String> markAllAsRead(@PathVariable String conversationId) {
-        ApiResponse<String> response = new ApiResponse<>();
         messageService.markAllAsRead(conversationId);
         sendConversationPreviewToUser(conversationId, getCurrentUserId());
-        response.setData("Đã đánh dấu toàn bộ tin nhắn là đã đọc.");
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success("All visible messages marked as read.");
     }
 
-    // DELETE /messages/{messageId} - Xóa tin nhắn (soft delete)
     @DeleteMapping("/{messageId}")
     ApiResponse<String> deleteMessage(@PathVariable String messageId) {
-        ApiResponse<String> response = new ApiResponse<>();
         messageService.deleteMessage(messageId);
-        response.setData("Đã xóa tin nhắn.");
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success("Message deleted.");
     }
 
-    // GET /messages/conversation/{conversationId}/unread-count - Đếm tin nhắn chưa đọc
     @GetMapping("/conversation/{conversationId}/unread-count")
     ApiResponse<Long> countUnread(@PathVariable String conversationId) {
-        ApiResponse<Long> response = new ApiResponse<>();
-        response.setData(messageService.countUnreadMessages(conversationId));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(messageService.countUnreadMessages(conversationId));
     }
 
-    // GET /messages/conversation/{conversationId}/latest - Lấy tin nhắn mới nhất
     @GetMapping("/conversation/{conversationId}/latest")
     ApiResponse<MessageResponse> getLatestMessage(@PathVariable String conversationId) {
-        ApiResponse<MessageResponse> response = new ApiResponse<>();
-        response.setData(messageService.getLatestMessage(conversationId));
-        response.setCode(ErrorCode.SUCCESS.getCode());
-        return response;
+        return success(messageService.getLatestMessage(conversationId));
     }
 
     private void sendConversationPreviewToMembers(String conversationId) {
@@ -118,5 +99,12 @@ public class MessageController {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         return authentication.getName();
+    }
+
+    private <T> ApiResponse<T> success(T data) {
+        return ApiResponse.<T>builder()
+                .code(200)
+                .data(data)
+                .build();
     }
 }

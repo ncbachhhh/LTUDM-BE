@@ -12,22 +12,9 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class UserProfileResponse {
-    String id;
-    String email;
-    String username;
-
-    @JsonProperty("display_name")
-    String displayName;
-
-    @JsonProperty("avatar_url")
-    String avatarUrl;
-
-    @JsonProperty("friendship_status")
-    String friendshipStatus;
-
-    @JsonProperty("friendship_direction")
-    String friendshipDirection;
+public class PresenceResponse {
+    @JsonProperty("user_id")
+    String userId;
 
     @JsonProperty("is_online")
     boolean online;

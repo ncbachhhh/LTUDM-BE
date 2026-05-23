@@ -3,11 +3,14 @@ package com.ncbachhhh.LTUDM.service;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.FriendshipResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
+import com.ncbachhhh.LTUDM.entity.Block.Block;
 import com.ncbachhhh.LTUDM.entity.Friendship.Friendship;
 import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
+import com.ncbachhhh.LTUDM.entity.Key.BlockId;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
+import com.ncbachhhh.LTUDM.repository.BlockRepository;
 import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.UserRepository;
 import lombok.AccessLevel;
@@ -26,8 +29,11 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FriendshipService {
     FriendshipRepository friendshipRepository;
+    BlockRepository blockRepository;
     UserRepository userRepository;
     ConversationService conversationService;
+    PresenceService presenceService;
+    RelationshipService relationshipService;
 
     @Transactional
     public FriendshipResponse sendRequest(String addresseeId) {
@@ -99,8 +105,13 @@ public class FriendshipService {
         Friendship friendship = getFriendship(friendshipId);
 
         ensureFriendshipParticipant(friendship, currentUserId);
-        if (friendship.getStatus() != FriendshipStatus.ACCEPTED) {
+        if (friendship.getStatus() != FriendshipStatus.ACCEPTED
+                && friendship.getStatus() != FriendshipStatus.BLOCKED) {
             throw new AppException(ErrorCode.NOT_FRIENDS);
+        }
+        if (friendship.getStatus() == FriendshipStatus.BLOCKED
+                && !friendship.getRequesterId().equals(currentUserId)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
         }
 
         friendshipRepository.delete(friendship);
@@ -111,14 +122,68 @@ public class FriendshipService {
         String currentUserId = getCurrentUserId();
         validateTargetUser(currentUserId, userId);
 
-        Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, userId)
-                .orElseGet(Friendship::new);
+        BlockId blockId = new BlockId(currentUserId, userId);
+        if (!blockRepository.existsById(blockId)) {
+            Block block = new Block();
+            block.setId(blockId);
+            blockRepository.save(block);
+        }
 
-        friendship.setRequesterId(currentUserId);
-        friendship.setAddresseeId(userId);
-        friendship.setStatus(FriendshipStatus.BLOCKED);
+        Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, userId).orElse(null);
+        if (friendship != null && friendship.getStatus() == FriendshipStatus.BLOCKED
+                && friendship.getRequesterId().equals(currentUserId)) {
+            friendship.setStatus(FriendshipStatus.ACCEPTED);
+            friendship = friendshipRepository.save(friendship);
+        }
 
-        return toResponse(friendshipRepository.save(friendship), currentUserId, null);
+        return toBlockedResponse(currentUserId, userId, friendship);
+    }
+
+    @Transactional
+    public void unblockUser(String userId) {
+        String currentUserId = getCurrentUserId();
+        validateUnblockTarget(currentUserId, userId);
+
+        boolean existsInBlocks = blockRepository.existsByBlockerIdAndBlockedId(currentUserId, userId);
+        Friendship legacyBlockedFriendship = friendshipRepository.findAllBetweenUsers(currentUserId, userId).stream()
+                .filter(friendship -> friendship.getRequesterId().equals(currentUserId))
+                .filter(friendship -> friendship.getAddresseeId().equals(userId))
+                .filter(friendship -> friendship.getStatus() == FriendshipStatus.BLOCKED)
+                .findFirst()
+                .orElse(null);
+
+        if (!existsInBlocks && legacyBlockedFriendship == null) {
+            throw new AppException(ErrorCode.USER_NOT_BLOCKED);
+        }
+
+        if (existsInBlocks) {
+            blockRepository.deleteByBlockerIdAndBlockedId(currentUserId, userId);
+        }
+        if (legacyBlockedFriendship != null) {
+            legacyBlockedFriendship.setStatus(FriendshipStatus.ACCEPTED);
+            friendshipRepository.save(legacyBlockedFriendship);
+        }
+    }
+
+    public List<FriendshipResponse> getBlockedUsers() {
+        String currentUserId = getCurrentUserId();
+        List<FriendshipResponse> blockedByBlockTable = blockRepository.findByBlockerId(currentUserId).stream()
+                .map(block -> {
+                    String blockedUserId = block.getId().getBlockedId();
+                    Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, blockedUserId).orElse(null);
+                    return toBlockedResponse(currentUserId, blockedUserId, friendship);
+                })
+                .toList();
+
+        List<FriendshipResponse> legacyBlocked = friendshipRepository.findByRequesterIdAndStatus(currentUserId, FriendshipStatus.BLOCKED).stream()
+                .filter(friendship -> blockedByBlockTable.stream()
+                        .noneMatch(response -> response.getUser() != null
+                                && response.getUser().getId().equals(friendship.getAddresseeId())))
+                .map(friendship -> toBlockedResponse(currentUserId, friendship.getAddresseeId(), friendship))
+                .toList();
+
+        return java.util.stream.Stream.concat(blockedByBlockTable.stream(), legacyBlocked.stream())
+                .toList();
     }
 
     public List<FriendshipResponse> getIncomingRequests() {
@@ -152,7 +217,7 @@ public class FriendshipService {
                 .map(user -> {
                     Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, user.getId())
                             .orElseThrow(() -> new AppException(ErrorCode.FRIENDSHIP_NOT_FOUND));
-                    return toUserProfile(user, friendship, currentUserId);
+                    return toUserProfile(user, currentUserId);
                 })
                 .toList();
     }
@@ -176,6 +241,15 @@ public class FriendshipService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         if (!targetUser.isActive()) {
             throw new AppException(ErrorCode.USER_BANNED);
+        }
+    }
+
+    private void validateUnblockTarget(String currentUserId, String targetUserId) {
+        if (!StringUtils.hasText(targetUserId)) {
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
+        if (currentUserId.equals(targetUserId)) {
+            throw new AppException(ErrorCode.CANNOT_FRIEND_SELF);
         }
     }
 
@@ -216,28 +290,50 @@ public class FriendshipService {
                 .status(friendship.getStatus())
                 .createdAt(friendship.getCreatedAt())
                 .updatedAt(friendship.getUpdatedAt())
-                .user(toUserProfile(otherUser, friendship, currentUserId))
+                .user(toUserProfile(otherUser, currentUserId))
                 .conversation(conversation)
                 .build();
     }
 
-    private UserProfileResponse toUserProfile(User user, Friendship friendship, String currentUserId) {
+    private FriendshipResponse toBlockedResponse(String currentUserId, String blockedUserId, Friendship friendship) {
+        User blockedUser = userRepository.findById(blockedUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, blockedUserId);
+
+        return FriendshipResponse.builder()
+                .id(friendship == null ? null : friendship.getId())
+                .requesterId(currentUserId)
+                .addresseeId(blockedUserId)
+                .status(FriendshipStatus.BLOCKED)
+                .createdAt(friendship == null ? null : friendship.getCreatedAt())
+                .updatedAt(friendship == null ? null : friendship.getUpdatedAt())
+                .user(UserProfileResponse.builder()
+                        .id(blockedUser.getId())
+                        .email(blockedUser.getEmail())
+                        .username(blockedUser.getUsername())
+                        .displayName(blockedUser.getDisplayName())
+                        .avatarUrl(blockedUser.getAvatarUrl())
+                        .friendshipStatus(relationship.status())
+                        .friendshipDirection(relationship.direction())
+                        .online(presenceService.isOnline(blockedUser.getId()))
+                        .build())
+                .conversation(null)
+                .build();
+    }
+
+    private UserProfileResponse toUserProfile(User user, String currentUserId) {
+        RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, user.getId());
+
         return UserProfileResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
                 .avatarUrl(user.getAvatarUrl())
-                .friendshipStatus(friendship.getStatus().name())
-                .friendshipDirection(resolveFriendshipDirection(friendship, currentUserId))
+                .friendshipStatus(relationship.status())
+                .friendshipDirection(relationship.direction())
+                .online(presenceService.isOnline(user.getId()))
                 .build();
-    }
-
-    private String resolveFriendshipDirection(Friendship friendship, String currentUserId) {
-        if (friendship.getStatus() != FriendshipStatus.PENDING) {
-            return "NONE";
-        }
-        return friendship.getRequesterId().equals(currentUserId) ? "OUTGOING" : "INCOMING";
     }
 
     private String getCurrentUserId() {

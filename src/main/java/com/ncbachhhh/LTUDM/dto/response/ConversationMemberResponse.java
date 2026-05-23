@@ -33,4 +33,7 @@ public class ConversationMemberResponse {
 
     @JsonProperty("joined_at")
     LocalDateTime joinedAt;
+
+    @JsonProperty("is_online")
+    boolean online;
 }

@@ -16,6 +16,8 @@ public interface FriendshipRepository extends JpaRepository<Friendship, String> 
 
     List<Friendship> findByAddresseeId(String addresseeId);
 
+    List<Friendship> findByRequesterIdAndStatus(String requesterId, FriendshipStatus status);
+
     @Query("""
             SELECT f
             FROM Friendship f
@@ -32,9 +34,13 @@ public interface FriendshipRepository extends JpaRepository<Friendship, String> 
             WHERE (f.requesterId = :firstUserId AND f.addresseeId = :secondUserId)
                OR (f.requesterId = :secondUserId AND f.addresseeId = :firstUserId)
             """)
-    Optional<Friendship> findBetweenUsers(
+    List<Friendship> findAllBetweenUsers(
             @Param("firstUserId") String firstUserId,
             @Param("secondUserId") String secondUserId);
+
+    default Optional<Friendship> findBetweenUsers(String firstUserId, String secondUserId) {
+        return findAllBetweenUsers(firstUserId, secondUserId).stream().findFirst();
+    }
 
     @Query("""
             SELECT COUNT(f) > 0

@@ -14,7 +14,6 @@ import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMemberRole;
-import com.ncbachhhh.LTUDM.entity.Friendship.FriendshipStatus;
 import com.ncbachhhh.LTUDM.entity.Key.ConversationMemberId;
 import com.ncbachhhh.LTUDM.entity.Key.MessageReceiptId;
 import com.ncbachhhh.LTUDM.entity.Message.MessageType;
@@ -25,7 +24,6 @@ import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationRepository;
 import com.ncbachhhh.LTUDM.repository.AttachmentRepository;
-import com.ncbachhhh.LTUDM.repository.FriendshipRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
@@ -60,9 +58,9 @@ public class ConversationService {
     MessageDeletionRepository messageDeletionRepository;
     AttachmentRepository attachmentRepository;
     UserRepository userRepository;
-    FriendshipRepository friendshipRepository;
+    PresenceService presenceService;
+    RelationshipService relationshipService;
 
-    // Tạo đoạn chat theo loại được gửi từ client
     @Transactional
     public ConversationResponse createConversation(CreateConversationRequest request) {
         String currentUserId = getCurrentUserId();
@@ -74,7 +72,6 @@ public class ConversationService {
         };
     }
 
-    // Thêm một hoặc nhiều user vào nhóm nếu người gọi có quyền quản lý
     @Transactional
     public ConversationResponse addMembers(String conversationId, AddConversationMembersRequest request) {
         String currentUserId = getCurrentUserId();
@@ -110,7 +107,6 @@ public class ConversationService {
         return toConversationResponse(conversation, users);
     }
 
-    // Xóa nhóm chat và toàn bộ dữ liệu message liên quan
     @Transactional
     public void deleteGroupConversation(String conversationId) {
         String currentUserId = getCurrentUserId();
@@ -150,7 +146,7 @@ public class ConversationService {
     public ConversationResponse getConversationPreviewForUser(String conversationId, String userId) {
         Conversation conversation = getConversation(conversationId);
         ensureConversationMember(conversationId, userId);
-        return enrichConversationPreview(toConversationResponse(conversation), userId);
+        return enrichConversationPreview(applyDirectFriendshipState(toConversationResponse(conversation), userId), userId);
     }
 
     @Transactional(readOnly = true)
@@ -201,7 +197,6 @@ public class ConversationService {
                 .build();
     }
 
-    // Tạo chat cá nhân mới hoặc trả về chat đã tồn tại giữa hai user
     private ConversationResponse createDirectConversation(String currentUserId, CreateConversationRequest request) {
         List<String> memberIds = sanitizeMemberIds(request.getMemberIds());
         if (memberIds.size() != 1 || currentUserId.equals(memberIds.getFirst())) {
@@ -214,13 +209,12 @@ public class ConversationService {
 
         Conversation existingConversation = findExistingDirectConversation(currentUserId, targetUserId);
         if (existingConversation != null) {
-            return toConversationResponse(existingConversation);
+            return applyDirectFriendshipState(toConversationResponse(existingConversation), currentUserId);
         }
 
-        return createDirectConversation(currentUserId, targetUserId);
+        return applyDirectFriendshipState(createDirectConversation(currentUserId, targetUserId), currentUserId);
     }
 
-    // Tạo nhóm chat mới và gán người tạo làm chủ nhóm
     private ConversationResponse createGroupConversation(String currentUserId, CreateConversationRequest request) {
         String title = request.getTitle() == null ? null : request.getTitle().trim();
         if (title == null || title.isEmpty()) {
@@ -258,7 +252,6 @@ public class ConversationService {
         return toConversationResponse(savedConversation, users);
     }
 
-    // Tìm chat cá nhân hiện có của hai user để tránh tạo trùng
     private Conversation findExistingDirectConversation(String currentUserId, String targetUserId) {
         List<String> conversationIds = conversationMemberRepository.findByIdUserId(currentUserId).stream()
                 .map(member -> member.getId().getConversationId())
@@ -319,12 +312,10 @@ public class ConversationService {
         return toConversationResponse(savedConversation);
     }
 
-    // Build response conversation với dữ liệu member lấy từ database
     private ConversationResponse toConversationResponse(Conversation conversation) {
         return toConversationResponse(conversation, null);
     }
 
-    // Ánh xạ conversation và danh sách thành viên sang DTO response
     private ConversationResponse toConversationResponse(Conversation conversation, Map<String, User> providedUsers) {
         List<ConversationMember> members = conversationMemberRepository.findByIdConversationId(conversation.getId());
         List<String> memberIds = members.stream()
@@ -347,6 +338,7 @@ public class ConversationService {
                             .avatarUrl(user.getAvatarUrl())
                             .role(member.getRole())
                             .joinedAt(member.getJoinedAt())
+                            .online(presenceService.isOnline(user.getId()))
                             .build();
                 })
                 .toList();
@@ -365,6 +357,34 @@ public class ConversationService {
     private ConversationResponse enrichConversationPreview(ConversationResponse response, String userId) {
         response.setUnreadCount(messageRepository.countUnreadMessages(response.getId(), userId));
         response.setLatestMessage(getLatestVisibleMessage(response.getId(), userId));
+        return response;
+    }
+
+    private ConversationResponse applyDirectFriendshipState(ConversationResponse response, String currentUserId) {
+        if (response.getType() != ConversationType.DIRECT || response.getMembers() == null) {
+            response.setFriendshipStatus("NONE");
+            response.setFriendshipDirection("NONE");
+            return response;
+        }
+
+        String otherUserId = response.getMembers().stream()
+                .map(ConversationMemberResponse::getUserId)
+                .filter(memberId -> !memberId.equals(currentUserId))
+                .findFirst()
+                .orElse(null);
+
+        if (otherUserId == null) {
+            response.setFriendshipStatus("NONE");
+            response.setFriendshipDirection("NONE");
+            return response;
+        }
+
+        RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, otherUserId);
+        response.setFriendshipStatus(relationship.status());
+        response.setFriendshipDirection(relationship.direction());
+        response.setBlockedByCurrentUser(relationship.blockedByCurrentUser());
+        response.setCurrentUserBlocked(relationship.currentUserBlocked());
+
         return response;
     }
 
@@ -407,20 +427,17 @@ public class ConversationService {
                 .build();
     }
 
-    // Lấy conversation hoặc ném lỗi nếu không tồn tại
     private Conversation getConversation(String conversationId) {
         return conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
     }
 
-    // Chỉ cho phép các thao tác quản trị trên conversation nhóm
     private void ensureGroupConversation(Conversation conversation) {
         if (conversation.getType() != ConversationType.GROUP) {
             throw new AppException(ErrorCode.GROUP_OPERATION_NOT_ALLOWED);
         }
     }
 
-    // Kiểm tra user hiện tại có vai trò quản lý nhóm hay không
     private void ensureCanManageGroup(String conversationId, String userId) {
         ConversationMember member = conversationMemberRepository.findById(new ConversationMemberId(conversationId, userId))
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_CONVERSATION_MEMBER));
@@ -497,7 +514,6 @@ public class ConversationService {
         return value != null && !value.isBlank();
     }
 
-    // Tạo entity member cho conversation
     private ConversationMember buildConversationMember(String conversationId, String userId, ConversationMemberRole role) {
         ConversationMember member = new ConversationMember();
         member.setId(new ConversationMemberId(conversationId, userId));
@@ -505,7 +521,6 @@ public class ConversationService {
         return member;
     }
 
-    // Parse chuỗi type từ request sang enum ConversationType
     private ConversationType parseConversationType(String type) {
         if (type == null || type.isBlank()) {
             throw new AppException(ErrorCode.INVALID_CONVERSATION_TYPE);
@@ -518,7 +533,6 @@ public class ConversationService {
         }
     }
 
-    // Làm sạch danh sách member id: bỏ null, blank và phần tử trùng
     private List<String> sanitizeMemberIds(List<String> memberIds) {
         if (memberIds == null) {
             return List.of();
@@ -531,7 +545,6 @@ public class ConversationService {
                 .toList();
     }
 
-    // Tải danh sách user theo id và đảm bảo không có user nào bị thiếu
     private Map<String, User> getUsersByIds(List<String> userIds) {
         List<User> users = userRepository.findAllById(userIds);
         if (users.size() != userIds.size()) {
@@ -541,7 +554,6 @@ public class ConversationService {
         return users.stream().collect(Collectors.toMap(User::getId, Function.identity()));
     }
 
-    // Lấy một user theo id
     private User getUser(String userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -552,12 +564,9 @@ public class ConversationService {
     }
 
     private void ensureAreFriends(String firstUserId, String secondUserId) {
-        if (!friendshipRepository.existsBetweenUsersByStatus(firstUserId, secondUserId, FriendshipStatus.ACCEPTED)) {
-            throw new AppException(ErrorCode.NOT_FRIENDS);
-        }
+        relationshipService.ensureAcceptedFriendship(firstUserId, secondUserId);
     }
 
-    // Lấy id user hiện tại từ SecurityContext
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -566,28 +575,24 @@ public class ConversationService {
         return authentication.getName();
     }
 
-    // Lấy conversation của user hiện tại từ token
     @Transactional(readOnly = true)
     public List<ConversationResponse> getMyConversations() {
         String userId = getCurrentUserId();
 
-        // Lấy tất cả ConversationMember có user_id = userId hiện tại
         List<ConversationMember> conversationMembers = conversationMemberRepository.findByIdUserId(userId);
 
-        // Nếu user không có conversation nào, trả về rỗng
         if (conversationMembers.isEmpty()) {
             return List.of();
         }
 
-        // Lấy conversation_id từ các ConversationMember
         List<String> conversationIds = conversationMembers.stream()
                 .map(member -> member.getId().getConversationId())
                 .distinct()
                 .toList();
 
-        // Lấy danh sách Conversation và sắp xếp theo created_at giảm dần
         return conversationRepository.findAllById(conversationIds).stream()
                 .map(this::toConversationResponse)
+                .map(response -> applyDirectFriendshipState(response, userId))
                 .map(response -> enrichConversationPreview(response, userId))
                 .sorted(Comparator.comparing(this::getConversationPreviewTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();

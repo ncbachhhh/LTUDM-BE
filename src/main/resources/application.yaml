@@ -5,6 +5,8 @@ server:
   address: 0.0.0.0
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: LTUDM-Backend
   datasource:
