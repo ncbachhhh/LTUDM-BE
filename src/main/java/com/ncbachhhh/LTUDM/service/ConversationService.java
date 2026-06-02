@@ -35,6 +35,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -60,6 +61,7 @@ public class ConversationService {
     UserRepository userRepository;
     PresenceService presenceService;
     RelationshipService relationshipService;
+    R2StorageService r2StorageService;
 
     @Transactional
     public ConversationResponse createConversation(CreateConversationRequest request) {
@@ -140,6 +142,17 @@ public class ConversationService {
         conversationMemberRepository.save(targetMember);
 
         return toConversationResponse(conversation);
+    }
+
+    @Transactional
+    public ConversationResponse updateGroupAvatar(String conversationId, MultipartFile file) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureGroupConversation(conversation);
+        ensureCanManageGroup(conversationId, currentUserId);
+
+        conversation.setAvatarUrl(r2StorageService.uploadConversationAvatar(conversationId, file));
+        return toConversationResponse(conversationRepository.save(conversation));
     }
 
     @Transactional(readOnly = true)

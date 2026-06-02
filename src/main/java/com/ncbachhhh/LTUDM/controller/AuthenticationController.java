@@ -1,6 +1,7 @@
 package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.AuthenticationRequest;
+import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.ForgotPasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.LogoutRequest;
 import com.ncbachhhh.LTUDM.dto.request.RefreshTokenRequest;
@@ -77,6 +78,12 @@ public class AuthenticationController {
     public ApiResponse<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
         passwordResetService.resetPassword(request.getResetToken(), request.getNewPassword());
         return success("Password reset successfully.");
+    }
+
+    @PostMapping("/change-password")
+    public ApiResponse<Void> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
+        userService.changePassword(request);
+        return success("Password changed successfully.");
     }
 
     private <T> ApiResponse<T> success(T data) {

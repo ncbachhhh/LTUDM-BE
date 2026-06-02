@@ -78,6 +78,32 @@ public class R2StorageService {
         );
     }
 
+    public String uploadBackground(String userId, MultipartFile file) {
+        return uploadFile(
+                "backgrounds/%s".formatted(userId),
+                file,
+                IMAGE_CONTENT_TYPES,
+                MAX_AVATAR_SIZE_BYTES,
+                ErrorCode.BACKGROUND_FILE_REQUIRED,
+                ErrorCode.INVALID_BACKGROUND_FILE_TYPE,
+                ErrorCode.BACKGROUND_FILE_TOO_LARGE,
+                ErrorCode.BACKGROUND_UPLOAD_FAILED
+        );
+    }
+
+    public String uploadConversationAvatar(String conversationId, MultipartFile file) {
+        return uploadFile(
+                "conversations/%s/avatar".formatted(conversationId),
+                file,
+                IMAGE_CONTENT_TYPES,
+                MAX_AVATAR_SIZE_BYTES,
+                ErrorCode.CONVERSATION_AVATAR_FILE_REQUIRED,
+                ErrorCode.INVALID_CONVERSATION_AVATAR_FILE_TYPE,
+                ErrorCode.CONVERSATION_AVATAR_FILE_TOO_LARGE,
+                ErrorCode.CONVERSATION_AVATAR_UPLOAD_FAILED
+        );
+    }
+
     public String uploadMessageImage(String conversationId, String senderId, MultipartFile file) {
         return uploadFile(
                 "messages/%s/%s".formatted(conversationId, senderId),

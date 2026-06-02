@@ -63,6 +63,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        .requestMatchers(HttpMethod.POST, "/auth/change-password").authenticated()
                         .requestMatchers("/auth/**").permitAll()
 
                         .requestMatchers("/ws").permitAll()

@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -26,6 +27,15 @@ public class UserResponse {
     @JsonProperty("avatar_url")
     String avatarUrl;
 
+    @JsonProperty("background_url")
+    String backgroundUrl;
+
+    String gender;
+    LocalDate dob;
+    String phone;
+    String nickname;
+    String bio;
+
     @JsonProperty("created_at")
     LocalDateTime createdAt;
 
@@ -33,4 +43,12 @@ public class UserResponse {
 
     @JsonProperty("is_active")
     boolean active;
+
+    String showBirthday;
+    boolean onlineStatus;
+    boolean showEmail;
+    boolean mentionSuggestions;
+    boolean readReceipts;
+    boolean notificationEnabled;
+    boolean soundEnabled;
 }

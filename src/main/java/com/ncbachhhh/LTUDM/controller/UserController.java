@@ -1,6 +1,8 @@
 package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
+import com.ncbachhhh.LTUDM.dto.request.UserProfileUpdateRequest;
+import com.ncbachhhh.LTUDM.dto.request.UserSettingsUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
@@ -13,9 +15,11 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,6 +48,26 @@ public class UserController {
         return success(userService.getMyInfo());
     }
 
+    @PatchMapping("/profile")
+    ApiResponse<UserResponse> updateMyProfile(@RequestBody @Valid UserProfileUpdateRequest request) {
+        return success(userService.updateMyProfile(request));
+    }
+
+    @PutMapping("/profile")
+    ApiResponse<UserResponse> replaceMyProfile(@RequestBody @Valid UserProfileUpdateRequest request) {
+        return success(userService.updateMyProfile(request));
+    }
+
+    @PatchMapping("/settings")
+    ApiResponse<UserResponse> updateMySettings(@RequestBody @Valid UserSettingsUpdateRequest request) {
+        return success(userService.updateMySettings(request));
+    }
+
+    @PutMapping("/settings")
+    ApiResponse<UserResponse> replaceMySettings(@RequestBody @Valid UserSettingsUpdateRequest request) {
+        return success(userService.updateMySettings(request));
+    }
+
     @GetMapping("/search-by-email")
     ApiResponse<UserProfileResponse> searchUserByEmail(@RequestParam("email") String email) {
         return success(userService.searchUserByEmail(email));
@@ -64,10 +88,36 @@ public class UserController {
         return success(userService.updateMyAvatar(file));
     }
 
+    @PostMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<String> updateMyProfileAvatar(@RequestParam("file") MultipartFile file) {
+        return success(userService.updateMyProfileAvatar(file));
+    }
+
+    @PutMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<String> replaceMyProfileAvatar(@RequestParam("file") MultipartFile file) {
+        return success(userService.updateMyProfileAvatar(file));
+    }
+
+    @PostMapping(value = "/profile/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<String> updateMyProfileBackground(@RequestParam("file") MultipartFile file) {
+        return success(userService.updateMyProfileBackground(file));
+    }
+
+    @PutMapping(value = "/profile/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<String> replaceMyProfileBackground(@RequestParam("file") MultipartFile file) {
+        return success(userService.updateMyProfileBackground(file));
+    }
+
     @PostMapping("/me/change-password")
     ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
         userService.changePassword(request);
         return success("Password changed successfully.");
+    }
+
+    @DeleteMapping("/me")
+    ApiResponse<String> deleteMyAccount() {
+        userService.deleteMyAccount();
+        return success("Account deleted successfully.");
     }
 
     private <T> ApiResponse<T> success(T data) {

@@ -2,6 +2,8 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.ChangePasswordRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserRegisterRequest;
+import com.ncbachhhh.LTUDM.dto.request.UserProfileUpdateRequest;
+import com.ncbachhhh.LTUDM.dto.request.UserSettingsUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.request.UserUpdateRequest;
 import com.ncbachhhh.LTUDM.dto.response.UserProfileResponse;
 import com.ncbachhhh.LTUDM.dto.response.UserResponse;
@@ -18,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -63,25 +66,20 @@ public class UserService {
     }
 
     public void changePassword(ChangePasswordRequest request) {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
+        User user = getCurrentUser();
 
-        User user = userRepository.findById(authentication.getName())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
-        if (!passwordEncoder.matches(request.getOld_password(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.WRONG_OLD_PASSWORD);
         }
-        if (!request.getNew_password().equals(request.getConfirm_password())) {
+        if (StringUtils.hasText(request.getConfirmPassword())
+                && !request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
         }
-        if (passwordEncoder.matches(request.getNew_password(), user.getPasswordHash())) {
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.SAME_PASSWORD);
         }
 
-        user.setPasswordHash(passwordEncoder.encode(request.getNew_password()));
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
     }
 
@@ -135,16 +133,81 @@ public class UserService {
     }
 
     public UserResponse updateMyAvatar(MultipartFile file) {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
-
-        User user = userRepository.findById(authentication.getName())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User user = getCurrentUser();
 
         user.setAvatarUrl(r2StorageService.uploadAvatar(user.getId(), file));
         return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    public String updateMyProfileAvatar(MultipartFile file) {
+        return updateMyAvatar(file).getAvatarUrl();
+    }
+
+    public String updateMyProfileBackground(MultipartFile file) {
+        User user = getCurrentUser();
+        user.setBackgroundUrl(r2StorageService.uploadBackground(user.getId(), file));
+        return userMapper.toUserResponse(userRepository.save(user)).getBackgroundUrl();
+    }
+
+    public UserResponse updateMyProfile(UserProfileUpdateRequest request) {
+        User user = getCurrentUser();
+
+        if (request.getName() != null) {
+            user.setDisplayName(request.getName());
+        }
+        if (request.getGender() != null) {
+            user.setGender(request.getGender());
+        }
+        if (request.getDob() != null) {
+            user.setDob(request.getDob());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getNickname() != null) {
+            user.setNickname(request.getNickname());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getBackgroundUrl() != null) {
+            user.setBackgroundUrl(request.getBackgroundUrl());
+        }
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    public UserResponse updateMySettings(UserSettingsUpdateRequest request) {
+        User user = getCurrentUser();
+
+        if (request.getShowBirthday() != null) {
+            user.setShowBirthday(request.getShowBirthday());
+        }
+        if (request.getOnlineStatus() != null) {
+            user.setOnlineStatus(request.getOnlineStatus());
+        }
+        if (request.getShowEmail() != null) {
+            user.setShowEmail(request.getShowEmail());
+        }
+        if (request.getMentionSuggestions() != null) {
+            user.setMentionSuggestions(request.getMentionSuggestions());
+        }
+        if (request.getReadReceipts() != null) {
+            user.setReadReceipts(request.getReadReceipts());
+        }
+        if (request.getNotificationEnabled() != null) {
+            user.setNotificationEnabled(request.getNotificationEnabled());
+        }
+        if (request.getSoundEnabled() != null) {
+            user.setSoundEnabled(request.getSoundEnabled());
+        }
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public void deleteMyAccount() {
+        userRepository.delete(getCurrentUser());
     }
 
     public void banUser(String userId) {
@@ -167,6 +230,11 @@ public class UserService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         return authentication.getName();
+    }
+
+    private User getCurrentUser() {
+        return userRepository.findById(getCurrentUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
     private String normalizeEmail(String email) {
@@ -192,6 +260,7 @@ public class UserService {
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
                 .avatarUrl(user.getAvatarUrl())
+                .backgroundUrl(user.getBackgroundUrl())
                 .friendshipStatus(relationship.status())
                 .friendshipDirection(relationship.direction())
                 .online(presenceService.isOnline(user.getId()))

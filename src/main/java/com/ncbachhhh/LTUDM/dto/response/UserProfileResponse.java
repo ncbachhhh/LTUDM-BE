@@ -23,6 +23,9 @@ public class UserProfileResponse {
     @JsonProperty("avatar_url")
     String avatarUrl;
 
+    @JsonProperty("background_url")
+    String backgroundUrl;
+
     @JsonProperty("friendship_status")
     String friendshipStatus;
 
