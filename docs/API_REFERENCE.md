@@ -243,6 +243,53 @@ Behavior:
 - File upload len R2 folder `avatars/{userId}`.
 - `avatarUrl` cua user duoc update bang URL file.
 
+### Update My Settings
+
+```http
+PATCH /users/settings
+Content-Type: application/json
+```
+
+```http
+PUT /users/settings
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "showBirthday": "full",
+  "onlineStatus": true,
+  "showEmail": true,
+  "mentionSuggestions": true,
+  "readReceipts": true,
+  "notificationEnabled": true,
+  "soundEnabled": true,
+  "theme_mode": "dark",
+  "chat_color": "linear-gradient(135deg, rgb(255, 0, 204) 0%, rgb(51, 51, 153) 100%)"
+}
+```
+
+Behavior:
+
+- Current user duoc lay tu access token.
+- Tat ca fields deu optional; field null se khong update.
+- `theme_mode` chi nhan `light` hoac `dark`.
+- `chat_color` la CSS background value cho bubble/chat color, vi du `#0A84FF`, `rgb(0, 51, 255)`, hoac `linear-gradient(...)`.
+- `chat_color` toi da 500 ky tu va backend chan `url(...)`, `;`, `{}`, `<`, `>` de tranh CSS injection co ban.
+- `theme_mode` va `chat_color` luu tren bang `users`, ap dung cho toan bo UI/chat cua current user.
+- Thiet lap nay chi anh huong cach current user nhin thay giao dien, khong thay doi conversation cho user khac.
+
+Response `data`: `UserResponse`, bao gom:
+
+```json
+{
+  "theme_mode": "dark",
+  "chat_color": "linear-gradient(135deg, rgb(255, 0, 204) 0%, rgb(51, 51, 153) 100%)"
+}
+```
+
 ### Change Password
 
 ```http
@@ -685,3 +732,128 @@ GET /messages/conversation/{conversationId}/latest
 ```
 
 Tra message visible moi nhat cua current user trong conversation, hoac `null`.
+
+### Pin Message
+
+```http
+PUT /messages/{messageId}/pin
+```
+
+Behavior:
+
+- Message phai ton tai va chua bi current user soft-delete.
+- Current user phai la member cua conversation chua message.
+- Moi conversation toi da 5 pinned messages.
+- Neu message da duoc pin, tra lai message response hien tai.
+
+Response `data`: `MessageResponse` co them:
+
+```json
+{
+  "is_pinned": true,
+  "pinned_by": "userId",
+  "pinned_at": "2026-06-02T00:00:00"
+}
+```
+
+### Unpin Message
+
+```http
+DELETE /messages/{messageId}/pin
+```
+
+Behavior:
+
+- Message phai ton tai.
+- Current user phai la member cua conversation chua message.
+- Xoa pinned state neu co.
+
+### Get Pinned Messages
+
+```http
+GET /messages/conversation/{conversationId}/pinned
+```
+
+Behavior:
+
+- Current user phai la member cua conversation.
+- Tra pinned messages theo `pinned_at DESC`.
+- Khong tra message da bi current user soft-delete.
+
+Response `data`: `List<MessageResponse>`.
+
+### Get Conversation Images
+
+```http
+GET /messages/conversation/{conversationId}/media/images?page=0&size=20
+```
+
+Behavior:
+
+- Current user phai la member cua conversation.
+- Chi tra visible messages type `IMAGE`.
+- Exclude messages da bi current user soft-delete.
+- Sort theo `createdAt DESC`.
+
+Response `data`: `Page<MessageResponse>`.
+
+### Get Conversation Image Preview
+
+```http
+GET /messages/conversation/{conversationId}/media/images/preview?limit=3
+```
+
+Behavior:
+
+- Current user phai la member cua conversation.
+- Tra anh visible moi nhat type `IMAGE`.
+- `limit` default la 3, service clamp trong khoang 1 den 20.
+- Sort theo `createdAt DESC`.
+
+Response `data`: `List<MessageResponse>`.
+
+### Get Conversation Files
+
+```http
+GET /messages/conversation/{conversationId}/media/files?page=0&size=20
+```
+
+Behavior:
+
+- Current user phai la member cua conversation.
+- Chi tra visible messages type `FILE`.
+- Exclude messages da bi current user soft-delete.
+- Sort theo `createdAt DESC`.
+
+Response `data`: `Page<MessageResponse>`.
+
+### Get Conversation Links
+
+```http
+GET /messages/conversation/{conversationId}/media/links?page=0&size=20
+```
+
+Behavior:
+
+- Current user phai la member cua conversation.
+- Scan visible text messages co kha nang chua link.
+- Parse link trong service, ho tro `https://facebook.com`, `www.facebook.com`, `facebook.com`, `facebook.com/path`.
+- Khong bat email fragment nhu `gmail.com` trong `abc@gmail.com`.
+- Trim dau cau cuoi link, vi du `facebook.com.` thanh `facebook.com`.
+- Sort theo message `createdAt DESC`; neu mot message co nhieu link, tra tung link thanh mot item.
+
+Response `data`: `Page<ConversationLinkResponse>`.
+
+ConversationLinkResponse:
+
+```json
+{
+  "message_id": "messageId",
+  "conversation_id": "conversationId",
+  "sender_id": "senderId",
+  "url": "facebook.com",
+  "normalized_url": "https://facebook.com",
+  "text": "hom nay toi xem facebook.com hay lam",
+  "created_at": "2026-06-02T00:00:00"
+}
+```

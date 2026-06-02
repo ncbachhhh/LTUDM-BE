@@ -30,6 +30,8 @@ public interface UserMapper {
     @Mapping(target = "readReceipts", ignore = true)
     @Mapping(target = "notificationEnabled", ignore = true)
     @Mapping(target = "soundEnabled", ignore = true)
+    @Mapping(target = "themeMode", ignore = true)
+    @Mapping(target = "chatColor", ignore = true)
     @Mapping(target = "role", ignore = true)
     User toUser(UserRegisterRequest request);
 
@@ -54,6 +56,8 @@ public interface UserMapper {
     @Mapping(target = "readReceipts", ignore = true)
     @Mapping(target = "notificationEnabled", ignore = true)
     @Mapping(target = "soundEnabled", ignore = true)
+    @Mapping(target = "themeMode", ignore = true)
+    @Mapping(target = "chatColor", ignore = true)
     void updateUser(UserUpdateRequest request, @MappingTarget User user);
 
     UserResponse toUserResponse(User user);

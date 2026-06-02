@@ -2,6 +2,7 @@ package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
+import com.ncbachhhh.LTUDM.dto.response.ConversationLinkResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.exception.AppException;
@@ -26,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/messages")
@@ -81,6 +84,53 @@ public class MessageController {
     @GetMapping("/conversation/{conversationId}/latest")
     ApiResponse<MessageResponse> getLatestMessage(@PathVariable String conversationId) {
         return success(messageService.getLatestMessage(conversationId));
+    }
+
+    @PutMapping("/{messageId}/pin")
+    ApiResponse<MessageResponse> pinMessage(@PathVariable String messageId) {
+        return success(messageService.pinMessage(messageId));
+    }
+
+    @DeleteMapping("/{messageId}/pin")
+    ApiResponse<String> unpinMessage(@PathVariable String messageId) {
+        messageService.unpinMessage(messageId);
+        return success("Message unpinned.");
+    }
+
+    @GetMapping("/conversation/{conversationId}/pinned")
+    ApiResponse<List<MessageResponse>> getPinnedMessages(@PathVariable String conversationId) {
+        return success(messageService.getPinnedMessages(conversationId));
+    }
+
+    @GetMapping("/conversation/{conversationId}/media/images")
+    ApiResponse<Page<MessageResponse>> getConversationImages(
+            @PathVariable String conversationId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return success(messageService.getConversationImages(conversationId, page, size));
+    }
+
+    @GetMapping("/conversation/{conversationId}/media/images/preview")
+    ApiResponse<List<MessageResponse>> getConversationImagePreview(
+            @PathVariable String conversationId,
+            @RequestParam(defaultValue = "3") int limit) {
+        return success(messageService.getConversationImagePreview(conversationId, limit));
+    }
+
+    @GetMapping("/conversation/{conversationId}/media/files")
+    ApiResponse<Page<MessageResponse>> getConversationFiles(
+            @PathVariable String conversationId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return success(messageService.getConversationFiles(conversationId, page, size));
+    }
+
+    @GetMapping("/conversation/{conversationId}/media/links")
+    ApiResponse<Page<ConversationLinkResponse>> getConversationLinks(
+            @PathVariable String conversationId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return success(messageService.getConversationLinks(conversationId, page, size));
     }
 
     private void sendConversationPreviewToMembers(String conversationId) {

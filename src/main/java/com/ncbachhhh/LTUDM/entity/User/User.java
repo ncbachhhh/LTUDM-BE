@@ -87,4 +87,10 @@ public class User {
 
     @Column(name = "sound_enabled", nullable = false)
     private boolean soundEnabled = true;
+
+    @Column(name = "theme_mode", nullable = false, length = 10)
+    private String themeMode = "light";
+
+    @Column(name = "chat_color", nullable = false, length = 500)
+    private String chatColor = "#0A84FF";
 }

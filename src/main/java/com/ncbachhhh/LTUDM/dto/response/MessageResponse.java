@@ -26,6 +26,15 @@ public class MessageResponse {
     @JsonProperty("is_read")
     private boolean read;
 
+    @JsonProperty("is_pinned")
+    private boolean pinned;
+
+    @JsonProperty("pinned_by")
+    private String pinnedBy;
+
+    @JsonProperty("pinned_at")
+    private LocalDateTime pinnedAt;
+
     @JsonProperty("is_edited")
     private boolean edited;
 

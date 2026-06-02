@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -200,6 +201,12 @@ public class UserService {
         }
         if (request.getSoundEnabled() != null) {
             user.setSoundEnabled(request.getSoundEnabled());
+        }
+        if (request.getThemeMode() != null) {
+            user.setThemeMode(request.getThemeMode().trim().toLowerCase(Locale.ROOT));
+        }
+        if (request.getChatColor() != null) {
+            user.setChatColor(request.getChatColor().trim().toUpperCase(Locale.ROOT));
         }
 
         return userMapper.toUserResponse(userRepository.save(user));

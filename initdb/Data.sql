@@ -106,7 +106,10 @@ INSERT INTO `conversation_members` VALUES
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','11111111-1111-1111-1111-111111111111','OWNER',NULL,'2026-06-02 00:00:00'),
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00'),
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','22222222-2222-2222-2222-222222222222','OWNER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00');
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','11111111-1111-1111-1111-111111111111','OWNER',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','22222222-2222-2222-2222-222222222222','MEMBER',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00');
 /*!40000 ALTER TABLE `conversation_members` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -139,7 +142,8 @@ LOCK TABLES `conversations` WRITE;
 INSERT INTO `conversations` VALUES
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','DIRECT',NULL,'11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00',NULL),
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','DIRECT',NULL,'11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00',NULL),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','DIRECT',NULL,'22222222-2222-2222-2222-222222222222','2026-06-02 00:00:00',NULL);
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','DIRECT',NULL,'22222222-2222-2222-2222-222222222222','2026-06-02 00:00:00',NULL),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','GROUP','Group chat chung','11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00',NULL);
 /*!40000 ALTER TABLE `conversations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -200,6 +204,36 @@ CREATE TABLE `invalidated_tokens` (
 LOCK TABLES `invalidated_tokens` WRITE;
 /*!40000 ALTER TABLE `invalidated_tokens` DISABLE KEYS */;
 /*!40000 ALTER TABLE `invalidated_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pinned_messages`
+--
+
+DROP TABLE IF EXISTS `pinned_messages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pinned_messages` (
+  `message_id` char(36) NOT NULL,
+  `conversation_id` char(36) NOT NULL,
+  `pinned_by` char(36) NOT NULL,
+  `pinned_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`message_id`),
+  KEY `conversation_id` (`conversation_id`),
+  KEY `pinned_by` (`pinned_by`),
+  CONSTRAINT `pinned_messages_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `pinned_messages_ibfk_2` FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `pinned_messages_ibfk_3` FOREIGN KEY (`pinned_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pinned_messages`
+--
+
+LOCK TABLES `pinned_messages` WRITE;
+/*!40000 ALTER TABLE `pinned_messages` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pinned_messages` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -324,9 +358,13 @@ CREATE TABLE `users` (
   `read_receipts` tinyint(1) NOT NULL DEFAULT '1',
   `notification_enabled` tinyint(1) NOT NULL DEFAULT '1',
   `sound_enabled` tinyint(1) NOT NULL DEFAULT '1',
+  `theme_mode` varchar(10) NOT NULL DEFAULT 'light',
+  `chat_color` varchar(500) NOT NULL DEFAULT '#0A84FF',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `username` (`username`)
+  UNIQUE KEY `username` (`username`),
+  CONSTRAINT `chk_theme_mode` CHECK ((`theme_mode` in (_utf8mb4'light',_utf8mb4'dark'))),
+  CONSTRAINT `chk_chat_color` CHECK (((not(regexp_like(lower(`chat_color`),_utf8mb4'url[[:space:]]*\\('))) and regexp_like(`chat_color`,_utf8mb4'^[^;{}<>]{1,500}$')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

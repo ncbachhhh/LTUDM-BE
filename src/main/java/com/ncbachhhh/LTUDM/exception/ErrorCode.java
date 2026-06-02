@@ -48,6 +48,8 @@ public enum ErrorCode {
     INVALID_PHONE_FORMAT(400, "Phone number is invalid"),
     INVALID_BIO_FORMAT(400, "Bio must not exceed 500 characters"),
     INVALID_SHOW_BIRTHDAY(400, "Birthday visibility must be full or hide"),
+    INVALID_THEME_MODE(400, "Theme mode must be light or dark"),
+    INVALID_CHAT_COLOR(400, "Chat color must be a safe CSS background value"),
     SEARCH_QUERY_REQUIRED(400, "Search query is required"),
 
     CANNOT_FRIEND_SELF(400, "Cannot send a friend request to yourself"),
@@ -84,6 +86,7 @@ public enum ErrorCode {
     MESSAGE_FILE_TOO_LARGE(400, "Attachment must not exceed 100MB"),
     MESSAGE_FILE_UPLOAD_FAILED(500, "Attachment upload failed"),
     IMAGE_MESSAGE_NOT_SUPPORTED_OVER_WEBSOCKET(400, "Image messages must be sent with multipart HTTP request"),
+    PINNED_MESSAGE_LIMIT_EXCEEDED(400, "A conversation can have at most 5 pinned messages"),
 
     INTERNAL_ERROR(500, "Internal server error"),
     DATABASE_ERROR(500, "Database error"),

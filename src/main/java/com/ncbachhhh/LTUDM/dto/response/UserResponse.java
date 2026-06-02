@@ -51,4 +51,10 @@ public class UserResponse {
     boolean readReceipts;
     boolean notificationEnabled;
     boolean soundEnabled;
+
+    @JsonProperty("theme_mode")
+    String themeMode;
+
+    @JsonProperty("chat_color")
+    String chatColor;
 }

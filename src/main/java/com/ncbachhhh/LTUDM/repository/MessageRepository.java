@@ -59,6 +59,47 @@ public interface MessageRepository extends JpaRepository<Message, String> {
                                                          Pageable pageable);
 
     @Query("""
+            SELECT m
+            FROM Message m
+            WHERE m.conversationId = :conversationId
+              AND m.type = :type
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageDeletion md
+                  WHERE md.id.messageId = m.id
+                    AND md.id.userId = :userId
+              )
+            ORDER BY m.createdAt DESC
+            """)
+    Page<Message> findVisibleMessagesByConversationAndTypePaged(@Param("conversationId") String conversationId,
+                                                                @Param("userId") String userId,
+                                                                @Param("type") MessageType type,
+                                                                Pageable pageable);
+
+    @Query("""
+            SELECT m
+            FROM Message m
+            WHERE m.conversationId = :conversationId
+              AND m.type = com.ncbachhhh.LTUDM.entity.Message.MessageType.TEXT
+              AND m.content IS NOT NULL
+              AND (
+                  LOWER(m.content) LIKE '%http://%'
+                  OR LOWER(m.content) LIKE '%https://%'
+                  OR LOWER(m.content) LIKE '%www.%'
+                  OR m.content LIKE '%.%'
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageDeletion md
+                  WHERE md.id.messageId = m.id
+                    AND md.id.userId = :userId
+              )
+            ORDER BY m.createdAt DESC
+            """)
+    List<Message> findVisibleLinkCandidateMessages(@Param("conversationId") String conversationId,
+                                                   @Param("userId") String userId);
+
+    @Query("""
             SELECT COUNT(m)
             FROM Message m
             WHERE m.conversationId = :conversationId

@@ -2,6 +2,7 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
 import com.ncbachhhh.LTUDM.dto.response.AttachmentResponse;
+import com.ncbachhhh.LTUDM.dto.response.ConversationLinkResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.entity.Attachment.Attachment;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
@@ -13,6 +14,7 @@ import com.ncbachhhh.LTUDM.entity.Message.Message;
 import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import com.ncbachhhh.LTUDM.entity.MessageDeletion.MessageDeletion;
 import com.ncbachhhh.LTUDM.entity.MessageReceipt.MessageReceipt;
+import com.ncbachhhh.LTUDM.entity.PinnedMessage.PinnedMessage;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.MessageMapper;
@@ -22,6 +24,7 @@ import com.ncbachhhh.LTUDM.repository.ConversationRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
+import com.ncbachhhh.LTUDM.repository.PinnedMessageRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -31,13 +34,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,9 +57,15 @@ public class MessageService {
     ConversationMemberRepository conversationMemberRepository;
     ConversationRepository conversationRepository;
     AttachmentRepository attachmentRepository;
+    PinnedMessageRepository pinnedMessageRepository;
     MessageMapper messageMapper;
     R2StorageService r2StorageService;
     RelationshipService relationshipService;
+
+    static final int MAX_PINNED_MESSAGES_PER_CONVERSATION = 5;
+    private static final Pattern LINK_PATTERN = Pattern.compile(
+            "(?i)(?<![\\w@])((?:https?://|www\\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:/[^\\s<]*)?)"
+    );
 
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -122,10 +135,126 @@ public class MessageService {
         Pageable pageable = PageRequest.of(page, size);
         Page<Message> messages = messageRepository.findVisibleMessagesByConversationPaged(conversationId, userId, pageable);
         Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messages.getContent());
+        Map<String, PinnedMessage> pinnedByMessageId = getPinnedMessagesByMessageId(messages.getContent());
         List<MessageResponse> content = messages.getContent().stream()
-                .map(message -> toMessageResponse(message, userId, attachmentsByMessageId.get(message.getId())))
+                .map(message -> toMessageResponse(
+                        message,
+                        userId,
+                        attachmentsByMessageId.get(message.getId()),
+                        pinnedByMessageId.get(message.getId())))
                 .toList();
         return new PageImpl<>(content, pageable, messages.getTotalElements());
+    }
+
+    @Transactional
+    public MessageResponse pinMessage(String messageId) {
+        String userId = getCurrentUserId();
+        Message message = getVisibleMessageForUser(messageId, userId);
+        ensureCanAccessConversation(message.getConversationId(), userId);
+
+        PinnedMessage pinnedMessage = pinnedMessageRepository.findByMessageId(messageId).orElse(null);
+        if (pinnedMessage == null) {
+            if (pinnedMessageRepository.countByConversationId(message.getConversationId()) >= MAX_PINNED_MESSAGES_PER_CONVERSATION) {
+                throw new AppException(ErrorCode.PINNED_MESSAGE_LIMIT_EXCEEDED);
+            }
+
+            pinnedMessage = new PinnedMessage();
+            pinnedMessage.setMessageId(message.getId());
+            pinnedMessage.setConversationId(message.getConversationId());
+            pinnedMessage.setPinnedBy(userId);
+            pinnedMessage.setPinnedAt(LocalDateTime.now());
+            pinnedMessage = pinnedMessageRepository.save(pinnedMessage);
+        }
+
+        return toMessageResponse(message, userId, getAttachment(messageId), pinnedMessage);
+    }
+
+    @Transactional
+    public void unpinMessage(String messageId) {
+        String userId = getCurrentUserId();
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
+        ensureCanAccessConversation(message.getConversationId(), userId);
+        pinnedMessageRepository.deleteById(messageId);
+    }
+
+    public List<MessageResponse> getPinnedMessages(String conversationId) {
+        String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
+        List<PinnedMessage> pinnedMessages = pinnedMessageRepository.findByConversationIdOrderByPinnedAtDesc(conversationId);
+        if (pinnedMessages.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, PinnedMessage> pinnedByMessageId = pinnedMessages.stream()
+                .collect(Collectors.toMap(PinnedMessage::getMessageId, pinnedMessage -> pinnedMessage));
+
+        List<String> messageIds = pinnedMessages.stream()
+                .map(PinnedMessage::getMessageId)
+                .toList();
+
+        Map<String, Message> messagesById = messageRepository.findAllById(messageIds).stream()
+                .filter(message -> !isDeletedForUser(message.getId(), userId))
+                .collect(Collectors.toMap(Message::getId, message -> message));
+
+        Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messagesById.values().stream().toList());
+
+        return pinnedMessages.stream()
+                .map(PinnedMessage::getMessageId)
+                .map(messagesById::get)
+                .filter(Objects::nonNull)
+                .map(message -> toMessageResponse(
+                        message,
+                        userId,
+                        attachmentsByMessageId.get(message.getId()),
+                        pinnedByMessageId.get(message.getId())))
+                .toList();
+    }
+
+    public Page<MessageResponse> getConversationImages(String conversationId, int page, int size) {
+        return getConversationMessagesByType(conversationId, MessageType.IMAGE, page, size);
+    }
+
+    public Page<MessageResponse> getConversationFiles(String conversationId, int page, int size) {
+        return getConversationMessagesByType(conversationId, MessageType.FILE, page, size);
+    }
+
+    public List<MessageResponse> getConversationImagePreview(String conversationId, int limit) {
+        String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
+        int safeLimit = Math.max(1, Math.min(limit, 20));
+        Page<Message> messages = messageRepository.findVisibleMessagesByConversationAndTypePaged(
+                conversationId,
+                userId,
+                MessageType.IMAGE,
+                PageRequest.of(0, safeLimit)
+        );
+        Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messages.getContent());
+        Map<String, PinnedMessage> pinnedByMessageId = getPinnedMessagesByMessageId(messages.getContent());
+
+        return messages.getContent().stream()
+                .map(message -> toMessageResponse(
+                        message,
+                        userId,
+                        attachmentsByMessageId.get(message.getId()),
+                        pinnedByMessageId.get(message.getId())))
+                .toList();
+    }
+
+    public Page<ConversationLinkResponse> getConversationLinks(String conversationId, int page, int size) {
+        String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
+        List<ConversationLinkResponse> links = messageRepository.findVisibleLinkCandidateMessages(conversationId, userId).stream()
+                .flatMap(message -> extractLinks(message).stream())
+                .toList();
+
+        Pageable pageable = PageRequest.of(page, size);
+        int start = (int) Math.min(pageable.getOffset(), links.size());
+        int end = Math.min(start + pageable.getPageSize(), links.size());
+        return new PageImpl<>(links.subList(start, end), pageable, links.size());
     }
 
     public void markAsRead(String messageId) {
@@ -206,14 +335,96 @@ public class MessageService {
     }
 
     private MessageResponse toMessageResponse(Message message, String userId) {
-        return toMessageResponse(message, userId, getAttachment(message.getId()));
+        return toMessageResponse(message, userId, getAttachment(message.getId()), getPinnedMessage(message.getId()));
     }
 
     private MessageResponse toMessageResponse(Message message, String userId, Attachment attachment) {
+        return toMessageResponse(message, userId, attachment, getPinnedMessage(message.getId()));
+    }
+
+    private MessageResponse toMessageResponse(Message message, String userId, Attachment attachment, PinnedMessage pinnedMessage) {
         MessageResponse response = messageMapper.toMessageResponse(message);
         response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));
         response.setAttachment(toAttachmentResponse(attachment));
+        response.setPinned(pinnedMessage != null);
+        response.setPinnedBy(pinnedMessage == null ? null : pinnedMessage.getPinnedBy());
+        response.setPinnedAt(pinnedMessage == null ? null : pinnedMessage.getPinnedAt());
         return response;
+    }
+
+    private Page<MessageResponse> getConversationMessagesByType(
+            String conversationId,
+            MessageType type,
+            int page,
+            int size
+    ) {
+        String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Message> messages = messageRepository.findVisibleMessagesByConversationAndTypePaged(
+                conversationId,
+                userId,
+                type,
+                pageable
+        );
+        Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messages.getContent());
+        Map<String, PinnedMessage> pinnedByMessageId = getPinnedMessagesByMessageId(messages.getContent());
+        List<MessageResponse> content = messages.getContent().stream()
+                .map(message -> toMessageResponse(
+                        message,
+                        userId,
+                        attachmentsByMessageId.get(message.getId()),
+                        pinnedByMessageId.get(message.getId())))
+                .toList();
+
+        return new PageImpl<>(content, pageable, messages.getTotalElements());
+    }
+
+    private List<ConversationLinkResponse> extractLinks(Message message) {
+        if (!StringUtils.hasText(message.getContent())) {
+            return List.of();
+        }
+
+        List<ConversationLinkResponse> links = new ArrayList<>();
+        Matcher matcher = LINK_PATTERN.matcher(message.getContent());
+        while (matcher.find()) {
+            String url = trimTrailingUrlPunctuation(matcher.group(1));
+            if (!StringUtils.hasText(url) || isLikelyEmailFragment(message.getContent(), matcher.start(1))) {
+                continue;
+            }
+
+            links.add(ConversationLinkResponse.builder()
+                    .messageId(message.getId())
+                    .conversationId(message.getConversationId())
+                    .senderId(message.getSenderId())
+                    .url(url)
+                    .normalizedUrl(normalizeUrl(url))
+                    .text(message.getContent())
+                    .createdAt(message.getCreatedAt())
+                    .build());
+        }
+        return links;
+    }
+
+    private String normalizeUrl(String url) {
+        String lowerUrl = url.toLowerCase();
+        if (lowerUrl.startsWith("http://") || lowerUrl.startsWith("https://")) {
+            return url;
+        }
+        return "https://" + url;
+    }
+
+    private boolean isLikelyEmailFragment(String content, int matchStart) {
+        return matchStart > 0 && content.charAt(matchStart - 1) == '@';
+    }
+
+    private String trimTrailingUrlPunctuation(String url) {
+        String trimmed = url;
+        while (!trimmed.isEmpty() && ".,;:!?)\\]}\"'".indexOf(trimmed.charAt(trimmed.length() - 1)) >= 0) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private Attachment createAttachmentIfNeeded(Message message, MultipartFile file) {
@@ -253,6 +464,35 @@ public class MessageService {
 
         return attachmentRepository.findByMessageIdIn(messageIds).stream()
                 .collect(Collectors.toMap(Attachment::getMessageId, attachment -> attachment));
+    }
+
+    private Map<String, PinnedMessage> getPinnedMessagesByMessageId(List<Message> messages) {
+        List<String> messageIds = messages.stream()
+                .map(Message::getId)
+                .toList();
+        if (messageIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return pinnedMessageRepository.findByMessageIdIn(messageIds).stream()
+                .collect(Collectors.toMap(PinnedMessage::getMessageId, pinnedMessage -> pinnedMessage));
+    }
+
+    private PinnedMessage getPinnedMessage(String messageId) {
+        return pinnedMessageRepository.findByMessageId(messageId).orElse(null);
+    }
+
+    private Message getVisibleMessageForUser(String messageId, String userId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
+        if (isDeletedForUser(messageId, userId)) {
+            throw new AppException(ErrorCode.MESSAGE_NOT_FOUND);
+        }
+        return message;
+    }
+
+    private boolean isDeletedForUser(String messageId, String userId) {
+        return messageDeletionRepository.existsById(new MessageDeletionId(messageId, userId));
     }
 
     private AttachmentResponse toAttachmentResponse(Attachment attachment) {
