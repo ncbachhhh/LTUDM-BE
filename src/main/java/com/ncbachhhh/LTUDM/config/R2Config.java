@@ -3,6 +3,7 @@ package com.ncbachhhh.LTUDM.config;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -19,12 +20,20 @@ public class R2Config {
         return S3Client.builder()
                 .endpointOverride(URI.create(r2Properties.endpoint()))
                 .region(Region.of(r2Properties.region()))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(r2Properties.accessKey(), r2Properties.secretKey())
-                ))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(true)
-                        .build())
+                .credentialsProvider(createCredentialsProvider(r2Properties))
+                .serviceConfiguration(createS3Configuration())
+                .build();
+    }
+
+    private StaticCredentialsProvider createCredentialsProvider(R2Properties r2Properties) {
+        return StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(r2Properties.accessKey(), r2Properties.secretKey())
+        );
+    }
+
+    private S3Configuration createS3Configuration() {
+        return S3Configuration.builder()
+                .pathStyleAccessEnabled(true)
                 .build();
     }
 }

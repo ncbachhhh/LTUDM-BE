@@ -38,65 +38,49 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ApiResponse<UserResponse> register(@RequestBody @Valid UserRegisterRequest request) {
-        return success(userService.createUser(request));
+        return ApiResponse.success(userService.createUser(request));
     }
 
     @PostMapping("/login")
     public ApiResponse<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
-        return success(authenticationService.authenticate(request));
+        return ApiResponse.success(authenticationService.authenticate(request));
     }
 
     @PostMapping("/refresh")
     public ApiResponse<AuthenticationResponse> refreshToken(@RequestBody @Valid RefreshTokenRequest request)
             throws ParseException, JOSEException {
-        return success(authenticationService.refreshToken(request));
+        return ApiResponse.success(authenticationService.refreshToken(request));
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestBody @Valid LogoutRequest request)
             throws ParseException, JOSEException {
         authenticationService.logout(request);
-        return success("Logout successful.");
+        return ApiResponse.message("Logout successful.");
     }
 
     @PostMapping("/forgot-password")
     public ApiResponse<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
         passwordResetService.forgotPassword(request.getEmail());
-        return success("If the email exists, an OTP has been sent.");
+        return ApiResponse.message("If the email exists, an OTP has been sent.");
     }
 
     @PostMapping("/verify-reset-otp")
     public ApiResponse<ResetOtpVerificationResponse> verifyResetOtp(@RequestBody @Valid VerifyResetOtpRequest request) {
-        return ApiResponse.<ResetOtpVerificationResponse>builder()
-                .code(200)
-                .message("OTP verified successfully.")
-                .data(passwordResetService.verifyResetOtp(request.getEmail(), request.getOtp()))
-                .build();
+        return ApiResponse.success(
+                passwordResetService.verifyResetOtp(request.getEmail(), request.getOtp()),
+                "OTP verified successfully.");
     }
 
     @PostMapping("/reset-password")
     public ApiResponse<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
         passwordResetService.resetPassword(request.getResetToken(), request.getNewPassword());
-        return success("Password reset successfully.");
+        return ApiResponse.message("Password reset successfully.");
     }
 
     @PostMapping("/change-password")
     public ApiResponse<Void> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
         userService.changePassword(request);
-        return success("Password changed successfully.");
-    }
-
-    private <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .code(200)
-                .data(data)
-                .build();
-    }
-
-    private ApiResponse<Void> success(String message) {
-        return ApiResponse.<Void>builder()
-                .code(200)
-                .message(message)
-                .build();
+        return ApiResponse.message("Password changed successfully.");
     }
 }

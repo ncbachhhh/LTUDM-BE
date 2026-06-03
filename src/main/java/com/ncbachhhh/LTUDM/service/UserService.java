@@ -57,13 +57,7 @@ public class UserService {
     }
 
     public UserResponse getMyInfo() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
-
-        return userMapper.toUserResponse(userRepository.findById(authentication.getName())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
+        return userMapper.toUserResponse(getCurrentUser());
     }
 
     public void changePassword(ChangePasswordRequest request) {

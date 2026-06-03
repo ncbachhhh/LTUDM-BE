@@ -26,71 +26,64 @@ public class FriendshipController {
 
     @PostMapping("/requests/{userId}")
     ApiResponse<FriendshipResponse> sendRequest(@PathVariable String userId) {
-        return success(friendshipService.sendRequest(userId));
+        return ApiResponse.success(friendshipService.sendRequest(userId));
     }
 
     @PostMapping("/{friendshipId}/accept")
     ApiResponse<FriendshipResponse> acceptRequest(@PathVariable String friendshipId) {
-        return success(friendshipService.acceptRequest(friendshipId));
+        return ApiResponse.success(friendshipService.acceptRequest(friendshipId));
     }
 
     @PostMapping("/{friendshipId}/decline")
     ApiResponse<FriendshipResponse> declineRequest(@PathVariable String friendshipId) {
-        return success(friendshipService.declineRequest(friendshipId));
+        return ApiResponse.success(friendshipService.declineRequest(friendshipId));
     }
 
     @DeleteMapping("/requests/{friendshipId}")
     ApiResponse<String> withdrawRequest(@PathVariable String friendshipId) {
         friendshipService.withdrawRequest(friendshipId);
-        return success("Friendship request withdrawn.");
+        return ApiResponse.success("Friendship request withdrawn.");
     }
 
     @DeleteMapping("/{friendshipId}")
     ApiResponse<String> deleteFriend(@PathVariable String friendshipId) {
         friendshipService.deleteFriend(friendshipId);
-        return success("Friend deleted.");
+        return ApiResponse.success("Friend deleted.");
     }
 
     @PostMapping("/blocks/{userId}")
     ApiResponse<FriendshipResponse> blockUser(@PathVariable String userId) {
-        return success(friendshipService.blockUser(userId));
+        return ApiResponse.success(friendshipService.blockUser(userId));
     }
 
     @DeleteMapping("/blocks/{userId}")
     ApiResponse<String> unblockUser(@PathVariable String userId) {
         friendshipService.unblockUser(userId);
-        return success("User unblocked.");
+        return ApiResponse.success("User unblocked.");
     }
 
     @GetMapping("/blocks")
     ApiResponse<List<FriendshipResponse>> getBlockedUsers() {
-        return success(friendshipService.getBlockedUsers());
+        return ApiResponse.success(friendshipService.getBlockedUsers());
     }
 
     @GetMapping("/requests/incoming")
     ApiResponse<List<FriendshipResponse>> getIncomingRequests() {
-        return success(friendshipService.getIncomingRequests());
+        return ApiResponse.success(friendshipService.getIncomingRequests());
     }
 
     @GetMapping("/requests/outgoing")
     ApiResponse<List<FriendshipResponse>> getOutgoingRequests() {
-        return success(friendshipService.getOutgoingRequests());
+        return ApiResponse.success(friendshipService.getOutgoingRequests());
     }
 
     @GetMapping
     ApiResponse<List<FriendshipResponse>> getFriends() {
-        return success(friendshipService.getFriends());
+        return ApiResponse.success(friendshipService.getFriends());
     }
 
     @GetMapping("/search")
     ApiResponse<List<UserProfileResponse>> searchMyFriendsByName(@RequestParam("name") String name) {
-        return success(friendshipService.searchMyFriendsByName(name));
-    }
-
-    private <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .code(200)
-                .data(data)
-                .build();
+        return ApiResponse.success(friendshipService.searchMyFriendsByName(name));
     }
 }

@@ -46,7 +46,7 @@ public class MessageController {
         MessageResponse savedMessage = messageService.sendMessage(request, file);
         messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
         sendConversationPreviewToMembers(request.getConversationId());
-        return success(savedMessage);
+        return ApiResponse.success(savedMessage);
     }
 
     @GetMapping("/conversation/{conversationId}/paged")
@@ -54,52 +54,52 @@ public class MessageController {
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return success(messageService.getMessagesByConversationPaged(conversationId, page, size));
+        return ApiResponse.success(messageService.getMessagesByConversationPaged(conversationId, page, size));
     }
 
     @PutMapping("/{messageId}/read")
     ApiResponse<String> markAsRead(@PathVariable String messageId) {
         messageService.markAsRead(messageId);
-        return success("Message marked as read.");
+        return ApiResponse.success("Message marked as read.");
     }
 
     @PutMapping("/conversation/{conversationId}/read-all")
     ApiResponse<String> markAllAsRead(@PathVariable String conversationId) {
         messageService.markAllAsRead(conversationId);
         sendConversationPreviewToUser(conversationId, getCurrentUserId());
-        return success("All visible messages marked as read.");
+        return ApiResponse.success("All visible messages marked as read.");
     }
 
     @DeleteMapping("/{messageId}")
     ApiResponse<String> deleteMessage(@PathVariable String messageId) {
         messageService.deleteMessage(messageId);
-        return success("Message deleted.");
+        return ApiResponse.success("Message deleted.");
     }
 
     @GetMapping("/conversation/{conversationId}/unread-count")
     ApiResponse<Long> countUnread(@PathVariable String conversationId) {
-        return success(messageService.countUnreadMessages(conversationId));
+        return ApiResponse.success(messageService.countUnreadMessages(conversationId));
     }
 
     @GetMapping("/conversation/{conversationId}/latest")
     ApiResponse<MessageResponse> getLatestMessage(@PathVariable String conversationId) {
-        return success(messageService.getLatestMessage(conversationId));
+        return ApiResponse.success(messageService.getLatestMessage(conversationId));
     }
 
     @PutMapping("/{messageId}/pin")
     ApiResponse<MessageResponse> pinMessage(@PathVariable String messageId) {
-        return success(messageService.pinMessage(messageId));
+        return ApiResponse.success(messageService.pinMessage(messageId));
     }
 
     @DeleteMapping("/{messageId}/pin")
     ApiResponse<String> unpinMessage(@PathVariable String messageId) {
         messageService.unpinMessage(messageId);
-        return success("Message unpinned.");
+        return ApiResponse.success("Message unpinned.");
     }
 
     @GetMapping("/conversation/{conversationId}/pinned")
     ApiResponse<List<MessageResponse>> getPinnedMessages(@PathVariable String conversationId) {
-        return success(messageService.getPinnedMessages(conversationId));
+        return ApiResponse.success(messageService.getPinnedMessages(conversationId));
     }
 
     @GetMapping("/conversation/{conversationId}/media/images")
@@ -107,14 +107,14 @@ public class MessageController {
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return success(messageService.getConversationImages(conversationId, page, size));
+        return ApiResponse.success(messageService.getConversationImages(conversationId, page, size));
     }
 
     @GetMapping("/conversation/{conversationId}/media/images/preview")
     ApiResponse<List<MessageResponse>> getConversationImagePreview(
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "3") int limit) {
-        return success(messageService.getConversationImagePreview(conversationId, limit));
+        return ApiResponse.success(messageService.getConversationImagePreview(conversationId, limit));
     }
 
     @GetMapping("/conversation/{conversationId}/media/files")
@@ -122,7 +122,7 @@ public class MessageController {
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return success(messageService.getConversationFiles(conversationId, page, size));
+        return ApiResponse.success(messageService.getConversationFiles(conversationId, page, size));
     }
 
     @GetMapping("/conversation/{conversationId}/media/links")
@@ -130,7 +130,7 @@ public class MessageController {
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return success(messageService.getConversationLinks(conversationId, page, size));
+        return ApiResponse.success(messageService.getConversationLinks(conversationId, page, size));
     }
 
     private void sendConversationPreviewToMembers(String conversationId) {
@@ -151,10 +151,4 @@ public class MessageController {
         return authentication.getName();
     }
 
-    private <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .code(200)
-                .data(data)
-                .build();
-    }
 }

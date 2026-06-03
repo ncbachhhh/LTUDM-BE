@@ -66,8 +66,8 @@ server:
     context-path: /api/v1
 
 jwt:
-  access-token-expiration: 3600
-  refresh-token-expiration: 604800
+  access-token-expiration: 360000
+  refresh-token-expiration: 6048000
 ```
 
 Multipart max request/file size is 100MB. Service-level validation is stricter:
@@ -89,6 +89,8 @@ Run tests:
 ```bash
 ./mvnw test
 ```
+
+Tests use `src/test/resources/application.yaml` with an in-memory H2 datasource, so a local MySQL instance is not required for the current test suite.
 
 Run app:
 

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 @Component("userSecurity")
 public class UserSecurity {
-
     public boolean isOwner(Authentication authentication, String userId) {
         if (authentication == null) {
             return false;

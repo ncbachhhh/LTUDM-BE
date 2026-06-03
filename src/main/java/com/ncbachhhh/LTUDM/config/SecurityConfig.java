@@ -25,14 +25,18 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final String JWT_SECRET_PROPERTY = "${jwt.secret}";
+    private static final String DEFAULT_CORS_ALLOWED_ORIGINS =
+            "${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}";
+
     private static final List<String> ALLOWED_METHODS = List.of(
             "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
     );
 
-    @Value("${jwt.secret}")
+    @Value(JWT_SECRET_PROPERTY)
     private String secretKey;
 
-    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}")
+    @Value(DEFAULT_CORS_ALLOWED_ORIGINS)
     private List<String> allowedOrigins;
 
     @Bean
@@ -56,9 +60,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(
+            HttpSecurity http,
+            CorsConfigurationSource corsConfigurationSource,
+            JwtDecoder jwtDecoder,
+            JwtAuthenticationConverter jwtAuthenticationConverter
+    ) throws Exception {
         return http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -77,8 +86,8 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwtConfigurer -> jwtConfigurer
-                                .decoder(jwtDecoder())
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                                .decoder(jwtDecoder)
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter)))
                 .build();
     }
 

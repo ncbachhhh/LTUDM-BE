@@ -40,6 +40,11 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String JWT_SECRET_PROPERTY = "${jwt.secret}";
+    private static final String SCOPE_CLAIM = "scope";
+
     private static final Pattern CONVERSATION_DESTINATION_PATTERN =
             Pattern.compile("^/(?:app/chat|topic/conversation)/([^/]+)(?:/.*)?$");
 
@@ -50,7 +55,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private final FriendshipRepository friendshipRepository;
     private final PresenceService presenceService;
 
-    @Value("${jwt.secret}")
+    @Value(JWT_SECRET_PROPERTY)
     private String secretKey;
 
     @Override
@@ -60,11 +65,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             return message;
         }
 
-        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+        StompCommand command = accessor.getCommand();
+        if (StompCommand.CONNECT.equals(command)) {
             authenticateConnection(accessor);
         }
 
-        if (StompCommand.SUBSCRIBE.equals(accessor.getCommand()) || StompCommand.SEND.equals(accessor.getCommand())) {
+        if (requiresDestinationAuthorization(command)) {
             authorizeDestinationAccess(accessor);
         }
 
@@ -75,7 +81,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         try {
             SignedJWT signedJwt = parseAndValidateToken(extractBearerToken(accessor));
             String userId = signedJwt.getJWTClaimsSet().getSubject();
-            String scope = (String) signedJwt.getJWTClaimsSet().getClaim("scope");
+            String scope = (String) signedJwt.getJWTClaimsSet().getClaim(SCOPE_CLAIM);
 
             accessor.setUser(createAuthentication(userId, scope));
             presenceService.markOnline(accessor.getSessionId(), userId);
@@ -90,13 +96,13 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     }
 
     private String extractBearerToken(StompHeaderAccessor accessor) {
-        String authHeader = accessor.getFirstNativeHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        String authHeader = accessor.getFirstNativeHeader(AUTHORIZATION_HEADER);
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
             log.warn("WebSocket: No token provided");
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        return authHeader.substring(7);
+        return authHeader.substring(BEARER_PREFIX.length());
     }
 
     private SignedJWT parseAndValidateToken(String token) throws Exception {
@@ -120,6 +126,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         }
 
         return signedJwt;
+    }
+
+    private boolean requiresDestinationAuthorization(StompCommand command) {
+        return StompCommand.SUBSCRIBE.equals(command) || StompCommand.SEND.equals(command);
     }
 
     private UsernamePasswordAuthenticationToken createAuthentication(String userId, String scope) {

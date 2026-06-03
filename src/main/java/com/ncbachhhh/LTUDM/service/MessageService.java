@@ -428,7 +428,7 @@ public class MessageService {
     }
 
     private Attachment createAttachmentIfNeeded(Message message, MultipartFile file) {
-        if (message.getType() != MessageType.IMAGE && message.getType() != MessageType.FILE) {
+        if (!hasAttachment(message)) {
             return null;
         }
 
@@ -455,7 +455,7 @@ public class MessageService {
 
     private Map<String, Attachment> getAttachmentsByMessageId(List<Message> messages) {
         List<String> messageIds = messages.stream()
-                .filter(message -> message.getType() == MessageType.IMAGE || message.getType() == MessageType.FILE)
+                .filter(this::hasAttachment)
                 .map(Message::getId)
                 .toList();
         if (messageIds.isEmpty()) {
@@ -480,6 +480,10 @@ public class MessageService {
 
     private PinnedMessage getPinnedMessage(String messageId) {
         return pinnedMessageRepository.findByMessageId(messageId).orElse(null);
+    }
+
+    private boolean hasAttachment(Message message) {
+        return message.getType() == MessageType.IMAGE || message.getType() == MessageType.FILE;
     }
 
     private Message getVisibleMessageForUser(String messageId, String userId) {

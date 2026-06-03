@@ -7,6 +7,7 @@ Backend source code has been cleaned and is in a better state than before, but i
 The current codebase is acceptable for continued development because:
 
 - Main backend code compiles successfully.
+- Full test suite can run without a local MySQL instance through the H2 test configuration.
 - Controller code is cleaner and more consistent.
 - Dead DTOs and unused mapper/repository methods were removed.
 - Relationship, friendship, and block state logic has been centralized in `RelationshipService`.
@@ -27,6 +28,7 @@ The current codebase is acceptable for continued development because:
 
 - Removed broken encoding comments.
 - Standardized `ApiResponse` creation.
+- Centralized `ApiResponse` success and message factory methods.
 - Kept endpoint paths and business behavior unchanged.
 
 ### DTO
@@ -34,6 +36,7 @@ The current codebase is acceptable for continued development because:
 - Removed unused DTOs:
   - `UserLoginRequest`
   - `UserLoginResponse`
+- Removed the empty tracked `UserMapperDefaultsTest` file.
 - Removed stale commented fields and noisy comments.
 
 ### Exception
@@ -113,7 +116,7 @@ Recommended next step:
 
 ### 3. Test Coverage Is Still Weak
 
-Compile passes, and the targeted mapper test passes, but the full test suite currently fails because `LtudmApplicationTests` starts the full Spring context and requires a reachable MySQL database.
+Compile and the full test suite pass without a local MySQL database because test resources now use an in-memory H2 datasource.
 
 Current verification results:
 
@@ -124,21 +127,13 @@ Current verification results:
 Pass.
 
 ```bash
-./mvnw -q "-Dtest=UserMapperDefaultsTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+./mvnw test
 ```
 
 Pass.
 
-```bash
-./mvnw test
-```
-
-Fails because MySQL is not reachable during the Spring context test.
-
 Recommended next step:
 
-- Add a test profile using H2 or Testcontainers.
-- Avoid making smoke tests depend on a local MySQL server.
 - Add focused unit tests for:
   - `RelationshipService`
   - `AuthenticationService`
@@ -181,9 +176,9 @@ Recommended next step:
 
 ## Priority Cleanup Plan
 
-1. Split `ConversationService`.
-2. Add proper test profile and make `mvnw test` pass without local MySQL.
-3. Add focused unit tests for relationship, friendship, conversation, and message rules.
+1. Add focused unit tests for relationship, friendship, conversation, and message rules.
+2. Split `ConversationService`.
+3. Split `MessageService`.
 4. Optimize `GET /conversations/me` query pattern.
 5. Review frontend usage of backend message strings.
 

@@ -40,90 +40,83 @@ public class UserController {
     ApiResponse<UserResponse> updateUser(
             @PathVariable("userId") String userId,
             @RequestBody @Valid UserUpdateRequest request) {
-        return success(userService.updateUser(userId, request));
+        return ApiResponse.success(userService.updateUser(userId, request));
     }
 
     @GetMapping("/me")
     ApiResponse<UserResponse> getMyInfo() {
-        return success(userService.getMyInfo());
+        return ApiResponse.success(userService.getMyInfo());
     }
 
     @PatchMapping("/profile")
     ApiResponse<UserResponse> updateMyProfile(@RequestBody @Valid UserProfileUpdateRequest request) {
-        return success(userService.updateMyProfile(request));
+        return ApiResponse.success(userService.updateMyProfile(request));
     }
 
     @PutMapping("/profile")
     ApiResponse<UserResponse> replaceMyProfile(@RequestBody @Valid UserProfileUpdateRequest request) {
-        return success(userService.updateMyProfile(request));
+        return ApiResponse.success(userService.updateMyProfile(request));
     }
 
     @PatchMapping("/settings")
     ApiResponse<UserResponse> updateMySettings(@RequestBody @Valid UserSettingsUpdateRequest request) {
-        return success(userService.updateMySettings(request));
+        return ApiResponse.success(userService.updateMySettings(request));
     }
 
     @PutMapping("/settings")
     ApiResponse<UserResponse> replaceMySettings(@RequestBody @Valid UserSettingsUpdateRequest request) {
-        return success(userService.updateMySettings(request));
+        return ApiResponse.success(userService.updateMySettings(request));
     }
 
     @GetMapping("/search-by-email")
     ApiResponse<UserProfileResponse> searchUserByEmail(@RequestParam("email") String email) {
-        return success(userService.searchUserByEmail(email));
+        return ApiResponse.success(userService.searchUserByEmail(email));
     }
 
     @GetMapping("/search")
     ApiResponse<List<UserProfileResponse>> searchUsersForFriendRequest(@RequestParam("keyword") String keyword) {
-        return success(userService.searchUsersForFriendRequest(keyword));
+        return ApiResponse.success(userService.searchUsersForFriendRequest(keyword));
     }
 
     @GetMapping("/{userId}/profile")
     ApiResponse<UserProfileResponse> getUserProfile(@PathVariable("userId") String userId) {
-        return success(userService.getUserProfile(userId));
+        return ApiResponse.success(userService.getUserProfile(userId));
     }
 
     @PatchMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<UserResponse> updateMyAvatar(@RequestParam("file") MultipartFile file) {
-        return success(userService.updateMyAvatar(file));
+        return ApiResponse.success(userService.updateMyAvatar(file));
     }
 
     @PostMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> updateMyProfileAvatar(@RequestParam("file") MultipartFile file) {
-        return success(userService.updateMyProfileAvatar(file));
+        return ApiResponse.success(userService.updateMyProfileAvatar(file));
     }
 
     @PutMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> replaceMyProfileAvatar(@RequestParam("file") MultipartFile file) {
-        return success(userService.updateMyProfileAvatar(file));
+        return ApiResponse.success(userService.updateMyProfileAvatar(file));
     }
 
     @PostMapping(value = "/profile/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> updateMyProfileBackground(@RequestParam("file") MultipartFile file) {
-        return success(userService.updateMyProfileBackground(file));
+        return ApiResponse.success(userService.updateMyProfileBackground(file));
     }
 
     @PutMapping(value = "/profile/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> replaceMyProfileBackground(@RequestParam("file") MultipartFile file) {
-        return success(userService.updateMyProfileBackground(file));
+        return ApiResponse.success(userService.updateMyProfileBackground(file));
     }
 
     @PostMapping("/me/change-password")
     ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
         userService.changePassword(request);
-        return success("Password changed successfully.");
+        return ApiResponse.success("Password changed successfully.");
     }
 
     @DeleteMapping("/me")
     ApiResponse<String> deleteMyAccount() {
         userService.deleteMyAccount();
-        return success("Account deleted successfully.");
-    }
-
-    private <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .code(200)
-                .data(data)
-                .build();
+        return ApiResponse.success("Account deleted successfully.");
     }
 }

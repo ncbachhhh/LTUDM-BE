@@ -60,10 +60,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<?>> error(ErrorCode errorCode, HttpStatus status) {
-        ApiResponse<?> response = ApiResponse.builder()
-                .code(errorCode.getCode())
-                .message(errorCode.getMessage())
-                .build();
+        ApiResponse<?> response = ApiResponse.error(errorCode.getCode(), errorCode.getMessage());
         return ResponseEntity.status(status).body(response);
     }
 

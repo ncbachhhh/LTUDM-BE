@@ -298,7 +298,6 @@ public class FriendshipService {
     private FriendshipResponse toBlockedResponse(String currentUserId, String blockedUserId, Friendship friendship) {
         User blockedUser = userRepository.findById(blockedUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, blockedUserId);
 
         return FriendshipResponse.builder()
                 .id(friendship == null ? null : friendship.getId())
@@ -307,17 +306,7 @@ public class FriendshipService {
                 .status(FriendshipStatus.BLOCKED)
                 .createdAt(friendship == null ? null : friendship.getCreatedAt())
                 .updatedAt(friendship == null ? null : friendship.getUpdatedAt())
-                .user(UserProfileResponse.builder()
-                        .id(blockedUser.getId())
-                        .email(blockedUser.getEmail())
-                        .username(blockedUser.getUsername())
-                        .displayName(blockedUser.getDisplayName())
-                        .avatarUrl(blockedUser.getAvatarUrl())
-                        .backgroundUrl(blockedUser.getBackgroundUrl())
-                        .friendshipStatus(relationship.status())
-                        .friendshipDirection(relationship.direction())
-                        .online(presenceService.isOnline(blockedUser.getId()))
-                        .build())
+                .user(toUserProfile(blockedUser, currentUserId))
                 .conversation(null)
                 .build();
     }

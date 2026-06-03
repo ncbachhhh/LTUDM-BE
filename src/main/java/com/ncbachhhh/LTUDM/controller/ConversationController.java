@@ -35,24 +35,24 @@ public class ConversationController {
 
     @GetMapping("/me")
     ApiResponse<List<ConversationResponse>> getMyConversations() {
-        return success(conversationService.getMyConversations());
+        return ApiResponse.success(conversationService.getMyConversations());
     }
 
     @GetMapping("/{conversationId}/info")
     ApiResponse<ConversationInfoResponse> getConversationInfo(@PathVariable String conversationId) {
-        return success(conversationService.getConversationInfo(conversationId));
+        return ApiResponse.success(conversationService.getConversationInfo(conversationId));
     }
 
     @PostMapping
     ApiResponse<ConversationResponse> createConversation(@RequestBody @Valid CreateConversationRequest request) {
-        return success(conversationService.createConversation(request));
+        return ApiResponse.success(conversationService.createConversation(request));
     }
 
     @PostMapping("/{conversationId}/members")
     ApiResponse<ConversationResponse> addMembers(
             @PathVariable String conversationId,
             @RequestBody @Valid AddConversationMembersRequest request) {
-        return success(conversationService.addMembers(conversationId, request));
+        return ApiResponse.success(conversationService.addMembers(conversationId, request));
     }
 
     @PatchMapping("/{conversationId}/members/{memberId}/nickname")
@@ -60,33 +60,26 @@ public class ConversationController {
             @PathVariable String conversationId,
             @PathVariable String memberId,
             @RequestBody @Valid UpdateConversationNicknameRequest request) {
-        return success(conversationService.updateMemberNickname(conversationId, memberId, request));
+        return ApiResponse.success(conversationService.updateMemberNickname(conversationId, memberId, request));
     }
 
     @PostMapping(value = "/{conversationId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<ConversationResponse> updateGroupAvatar(
             @PathVariable String conversationId,
             @RequestParam("file") MultipartFile file) {
-        return success(conversationService.updateGroupAvatar(conversationId, file));
+        return ApiResponse.success(conversationService.updateGroupAvatar(conversationId, file));
     }
 
     @PutMapping(value = "/{conversationId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<ConversationResponse> replaceGroupAvatar(
             @PathVariable String conversationId,
             @RequestParam("file") MultipartFile file) {
-        return success(conversationService.updateGroupAvatar(conversationId, file));
+        return ApiResponse.success(conversationService.updateGroupAvatar(conversationId, file));
     }
 
     @DeleteMapping("/{conversationId}")
     ApiResponse<String> deleteGroupConversation(@PathVariable String conversationId) {
         conversationService.deleteGroupConversation(conversationId);
-        return success("Group conversation deleted.");
-    }
-
-    private <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .code(200)
-                .data(data)
-                .build();
+        return ApiResponse.success("Group conversation deleted.");
     }
 }
