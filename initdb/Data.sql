@@ -374,10 +374,10 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` (`id`,`email`,`username`,`password_hash`,`display_name`,`avatar_url`,`created_at`,`role`,`is_active`) VALUES
-('11111111-1111-1111-1111-111111111111','user1@gmail.com','user1','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Nguyen Van A',NULL,'2026-06-02 00:00:00','USER',1),
-('22222222-2222-2222-2222-222222222222','user2@gmail.com','user2','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Pham Van B',NULL,'2026-06-02 00:00:00','USER',1),
-('33333333-3333-3333-3333-333333333333','user3@gmail.com','user3','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Bui Van C',NULL,'2026-06-02 00:00:00','USER',1);
+INSERT INTO `users` (`id`,`email`,`username`,`password_hash`,`display_name`,`avatar_url`,`created_at`,`role`,`is_active`,`chat_color`) VALUES
+('11111111-1111-1111-1111-111111111111','user1@gmail.com','user1','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Nguyen Van A',NULL,'2026-06-02 00:00:00','USER',1,'#0A84FF'),
+('22222222-2222-2222-2222-222222222222','user2@gmail.com','user2','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Pham Van B',NULL,'2026-06-02 00:00:00','USER',1,'#34C759'),
+('33333333-3333-3333-3333-333333333333','user3@gmail.com','user3','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Bui Van C',NULL,'2026-06-02 00:00:00','USER',1,'#FF9500');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
