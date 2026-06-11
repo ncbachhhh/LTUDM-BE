@@ -2,27 +2,35 @@ package com.ncbachhhh.LTUDM.service;
 
 import com.ncbachhhh.LTUDM.dto.request.AddConversationMembersRequest;
 import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
+import com.ncbachhhh.LTUDM.dto.request.MuteConversationRequest;
+import com.ncbachhhh.LTUDM.dto.request.UpdateConversationEmojiRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
 import com.ncbachhhh.LTUDM.dto.response.AttachmentResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoStatResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationMemberResponse;
+import com.ncbachhhh.LTUDM.dto.response.ConversationRealtimeEventResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.entity.Attachment.Attachment;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
 import com.ncbachhhh.LTUDM.entity.Conversation.ConversationType;
+import com.ncbachhhh.LTUDM.entity.ConversationDeletion.ConversationDeletion;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMember;
 import com.ncbachhhh.LTUDM.entity.ConversationMembers.ConversationMemberRole;
+import com.ncbachhhh.LTUDM.entity.Key.ConversationDeletionId;
 import com.ncbachhhh.LTUDM.entity.Key.ConversationMemberId;
 import com.ncbachhhh.LTUDM.entity.Key.MessageReceiptId;
+import com.ncbachhhh.LTUDM.entity.Key.MessageDeletionId;
 import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import com.ncbachhhh.LTUDM.entity.Message.Message;
+import com.ncbachhhh.LTUDM.entity.MessageDeletion.MessageDeletion;
 import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.repository.ConversationMemberRepository;
 import com.ncbachhhh.LTUDM.repository.ConversationRepository;
+import com.ncbachhhh.LTUDM.repository.ConversationDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.AttachmentRepository;
 import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
@@ -33,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,7 +61,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ConversationService {
+    private static final String EVENT_UPSERT = "CONVERSATION_UPSERT";
+    private static final String EVENT_REMOVED = "CONVERSATION_REMOVED";
+    private static final String CONVERSATION_QUEUE = "/queue/conversations";
+
     ConversationRepository conversationRepository;
+    ConversationDeletionRepository conversationDeletionRepository;
     ConversationMemberRepository conversationMemberRepository;
     MessageRepository messageRepository;
     MessageReceiptRepository messageReceiptRepository;
@@ -62,16 +76,19 @@ public class ConversationService {
     PresenceService presenceService;
     RelationshipService relationshipService;
     R2StorageService r2StorageService;
+    SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public ConversationResponse createConversation(CreateConversationRequest request) {
         String currentUserId = getCurrentUserId();
         ConversationType conversationType = parseConversationType(request.getType());
 
-        return switch (conversationType) {
+        ConversationResponse response = switch (conversationType) {
             case DIRECT -> createDirectConversation(currentUserId, request);
             case GROUP -> createGroupConversation(currentUserId, request);
         };
+        publishConversationUpsertToMembers(response.getId(), currentUserId);
+        return response;
     }
 
     @Transactional
@@ -106,7 +123,9 @@ public class ConversationService {
                 .toList();
         conversationMemberRepository.saveAll(newMembers);
 
-        return toConversationResponse(conversation, users);
+        ConversationResponse response = toConversationResponse(conversation, users);
+        publishConversationUpsert(conversationId, currentUserId, null, getConversationMemberIds(conversationId));
+        return response;
     }
 
     @Transactional
@@ -116,6 +135,133 @@ public class ConversationService {
         ensureGroupConversation(conversation);
         ensureCanManageGroup(conversationId, currentUserId);
 
+        List<String> memberIds = getConversationMemberIds(conversationId);
+        deleteConversationData(conversation);
+        publishConversationRemoved(conversationId, currentUserId, null, memberIds);
+    }
+
+    @Transactional
+    public ConversationResponse removeGroupMember(String conversationId, String memberId) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureGroupConversation(conversation);
+        ensureCanManageGroup(conversationId, currentUserId);
+
+        if (currentUserId.equals(memberId)) {
+            throw new AppException(ErrorCode.CANNOT_REMOVE_SELF_FROM_GROUP);
+        }
+
+        ConversationMember targetMember = getConversationMember(conversationId, memberId);
+        if (targetMember.getRole() == ConversationMemberRole.OWNER) {
+            throw new AppException(ErrorCode.CANNOT_REMOVE_GROUP_OWNER);
+        }
+
+        List<String> memberIdsBeforeRemoval = getConversationMemberIds(conversationId);
+        conversationMemberRepository.delete(targetMember);
+        List<String> remainingMemberIds = memberIdsBeforeRemoval.stream()
+                .filter(userId -> !userId.equals(memberId))
+                .toList();
+
+        ConversationResponse response = toConversationResponse(conversation);
+        publishConversationUpsert(conversationId, currentUserId, memberId, remainingMemberIds);
+        publishConversationRemoved(conversationId, currentUserId, memberId, List.of(memberId));
+        return response;
+    }
+
+    @Transactional
+    public ConversationResponse transferGroupOwnership(String conversationId, String newOwnerId) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureGroupConversation(conversation);
+        ensureCanManageGroup(conversationId, currentUserId);
+
+        if (currentUserId.equals(newOwnerId)) {
+            throw new AppException(ErrorCode.CANNOT_TRANSFER_OWNERSHIP_TO_SELF);
+        }
+
+        ConversationMember currentOwner = getConversationMember(conversationId, currentUserId);
+        ConversationMember newOwner = getConversationMember(conversationId, newOwnerId);
+
+        currentOwner.setRole(ConversationMemberRole.MEMBER);
+        newOwner.setRole(ConversationMemberRole.OWNER);
+        conversation.setCreatedBy(newOwnerId);
+
+        conversationMemberRepository.saveAll(List.of(currentOwner, newOwner));
+        ConversationResponse response = toConversationResponse(conversationRepository.save(conversation));
+        publishConversationUpsert(conversationId, currentUserId, newOwnerId, getConversationMemberIds(conversationId));
+        return response;
+    }
+
+    @Transactional
+    public ConversationResponse leaveGroupConversation(String conversationId) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureGroupConversation(conversation);
+
+        ConversationMember leavingMember = getConversationMember(conversationId, currentUserId);
+        List<ConversationMember> members = conversationMemberRepository.findByIdConversationId(conversationId);
+
+        List<String> memberIdsBeforeLeave = members.stream()
+                .map(member -> member.getId().getUserId())
+                .toList();
+
+        if (members.size() <= 1) {
+            deleteConversationData(conversation);
+            publishConversationRemoved(conversationId, currentUserId, currentUserId, memberIdsBeforeLeave);
+            return null;
+        }
+
+        if (leavingMember.getRole() == ConversationMemberRole.OWNER) {
+            ConversationMember nextOwner = members.stream()
+                    .filter(member -> !member.getId().getUserId().equals(currentUserId))
+                    .min(Comparator.comparing(ConversationMember::getJoinedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_CONVERSATION_MEMBERS));
+
+            nextOwner.setRole(ConversationMemberRole.OWNER);
+            conversation.setCreatedBy(nextOwner.getId().getUserId());
+            conversationMemberRepository.save(nextOwner);
+            conversationRepository.save(conversation);
+        }
+
+        conversationMemberRepository.delete(leavingMember);
+        List<String> remainingMemberIds = memberIdsBeforeLeave.stream()
+                .filter(userId -> !userId.equals(currentUserId))
+                .toList();
+        ConversationResponse response = toConversationResponse(conversation);
+        publishConversationUpsert(conversationId, currentUserId, currentUserId, remainingMemberIds);
+        publishConversationRemoved(conversationId, currentUserId, currentUserId, List.of(currentUserId));
+        return response;
+    }
+
+    @Transactional
+    public void deleteConversationForCurrentUser(String conversationId) {
+        String currentUserId = getCurrentUserId();
+        getConversation(conversationId);
+        ensureConversationMember(conversationId, currentUserId);
+
+        LocalDateTime deletedAt = LocalDateTime.now();
+        List<MessageDeletion> deletions = messageRepository.findVisibleMessagesByConversation(conversationId, currentUserId).stream()
+                .map(message -> {
+                    MessageDeletion deletion = new MessageDeletion();
+                    deletion.setId(new MessageDeletionId(message.getId(), currentUserId));
+                    deletion.setDeletedAt(deletedAt);
+                    return deletion;
+                })
+                .toList();
+        if (!deletions.isEmpty()) {
+            messageDeletionRepository.saveAll(deletions);
+        }
+
+        ConversationDeletion deletion = new ConversationDeletion();
+        deletion.setId(new ConversationDeletionId(conversationId, currentUserId));
+        deletion.setDeletedAt(deletedAt);
+        conversationDeletionRepository.save(deletion);
+
+        publishConversationRemoved(conversationId, currentUserId, currentUserId, List.of(currentUserId));
+    }
+
+    private void deleteConversationData(Conversation conversation) {
+        String conversationId = conversation.getId();
         List<String> messageIds = messageRepository.findByConversationId(conversationId).stream()
                 .map(message -> message.getId())
                 .toList();
@@ -124,6 +270,7 @@ public class ConversationService {
             messageDeletionRepository.deleteByIdMessageIdIn(messageIds);
             messageRepository.deleteByConversationId(conversationId);
         }
+        conversationDeletionRepository.deleteByIdConversationId(conversationId);
         conversationMemberRepository.deleteByIdConversationId(conversationId);
         conversationRepository.delete(conversation);
     }
@@ -141,7 +288,52 @@ public class ConversationService {
         targetMember.setNickname(nickname == null || nickname.isEmpty() ? null : nickname);
         conversationMemberRepository.save(targetMember);
 
-        return toConversationResponse(conversation);
+        ConversationResponse response = toConversationResponse(conversation);
+        publishConversationUpsert(conversationId, currentUserId, memberId, getConversationMemberIds(conversationId));
+        return response;
+    }
+
+    @Transactional
+    public ConversationResponse updateConversationEmoji(String conversationId, UpdateConversationEmojiRequest request) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureConversationMember(conversationId, currentUserId);
+
+        String emoji = request.getEmoji() == null ? null : request.getEmoji().trim();
+        if (!hasText(emoji)) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
+
+        conversation.setEmoji(emoji);
+        ConversationResponse response = toConversationResponse(conversationRepository.save(conversation));
+        publishConversationUpsert(conversationId, currentUserId, null, getConversationMemberIds(conversationId));
+        return enrichConversationPreview(applyDirectFriendshipState(response, currentUserId), currentUserId);
+    }
+
+    @Transactional
+    public ConversationResponse muteConversation(String conversationId, MuteConversationRequest request) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ConversationMember member = getConversationMember(conversationId, currentUserId);
+
+        if (request.getMutedUntil().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
+
+        member.setMutedUntil(request.getMutedUntil());
+        conversationMemberRepository.save(member);
+        return enrichConversationPreview(toConversationResponse(conversation), currentUserId);
+    }
+
+    @Transactional
+    public ConversationResponse unmuteConversation(String conversationId) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ConversationMember member = getConversationMember(conversationId, currentUserId);
+
+        member.setMutedUntil(null);
+        conversationMemberRepository.save(member);
+        return enrichConversationPreview(toConversationResponse(conversation), currentUserId);
     }
 
     @Transactional
@@ -152,7 +344,9 @@ public class ConversationService {
         ensureCanManageGroup(conversationId, currentUserId);
 
         conversation.setAvatarUrl(r2StorageService.uploadConversationAvatar(conversationId, file));
-        return toConversationResponse(conversationRepository.save(conversation));
+        ConversationResponse response = toConversationResponse(conversationRepository.save(conversation));
+        publishConversationUpsert(conversationId, currentUserId, null, getConversationMemberIds(conversationId));
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -200,6 +394,8 @@ public class ConversationService {
                 .title(conversation.getTitle())
                 .displayName(displayName)
                 .avatarUrl(avatarUrl)
+                .emoji(defaultIfBlank(conversation.getEmoji(), "👍"))
+                .mutedUntil(getMutedUntil(conversationId, currentUserId))
                 .status(conversation.getType() == ConversationType.GROUP ? "Nhóm chat" : "Ngoại tuyến")
                 .createdBy(conversation.getCreatedBy())
                 .createdAt(conversation.getCreatedAt())
@@ -363,6 +559,7 @@ public class ConversationService {
                 .createdBy(conversation.getCreatedBy())
                 .createdAt(conversation.getCreatedAt())
                 .avatarUrl(conversation.getAvatarUrl())
+                .emoji(defaultIfBlank(conversation.getEmoji(), "👍"))
                 .members(memberResponses)
                 .build();
     }
@@ -370,7 +567,14 @@ public class ConversationService {
     private ConversationResponse enrichConversationPreview(ConversationResponse response, String userId) {
         response.setUnreadCount(messageRepository.countUnreadMessages(response.getId(), userId));
         response.setLatestMessage(getLatestVisibleMessage(response.getId(), userId));
+        response.setMutedUntil(getMutedUntil(response.getId(), userId));
         return response;
+    }
+
+    private LocalDateTime getMutedUntil(String conversationId, String userId) {
+        return conversationMemberRepository.findById(new ConversationMemberId(conversationId, userId))
+                .map(ConversationMember::getMutedUntil)
+                .orElse(null);
     }
 
     private ConversationResponse applyDirectFriendshipState(ConversationResponse response, String currentUserId) {
@@ -452,11 +656,15 @@ public class ConversationService {
     }
 
     private void ensureCanManageGroup(String conversationId, String userId) {
-        ConversationMember member = conversationMemberRepository.findById(new ConversationMemberId(conversationId, userId))
-                .orElseThrow(() -> new AppException(ErrorCode.NOT_CONVERSATION_MEMBER));
+        ConversationMember member = getConversationMember(conversationId, userId);
         if (member.getRole() != ConversationMemberRole.OWNER) {
             throw new AppException(ErrorCode.NOT_GROUP_MANAGER);
         }
+    }
+
+    private ConversationMember getConversationMember(String conversationId, String userId) {
+        return conversationMemberRepository.findById(new ConversationMemberId(conversationId, userId))
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_CONVERSATION_MEMBER));
     }
 
     private void ensureConversationMember(String conversationId, String userId) {
@@ -607,8 +815,16 @@ public class ConversationService {
                 .map(this::toConversationResponse)
                 .map(response -> applyDirectFriendshipState(response, userId))
                 .map(response -> enrichConversationPreview(response, userId))
+                .filter(response -> shouldShowConversation(response, userId))
                 .sorted(Comparator.comparing(this::getConversationPreviewTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
+    }
+
+    private boolean shouldShowConversation(ConversationResponse response, String userId) {
+        if (response.getLatestMessage() != null) {
+            return true;
+        }
+        return !conversationDeletionRepository.existsById(new ConversationDeletionId(response.getId(), userId));
     }
 
     private LocalDateTime getConversationPreviewTime(ConversationResponse response) {
@@ -616,5 +832,59 @@ public class ConversationService {
             return response.getLatestMessage().getCreatedAt();
         }
         return response.getCreatedAt();
+    }
+
+    private void publishConversationUpsertToMembers(String conversationId, String actorUserId) {
+        publishConversationUpsert(conversationId, actorUserId, null, getConversationMemberIds(conversationId));
+    }
+
+    private void publishConversationUpsert(
+            String conversationId,
+            String actorUserId,
+            String targetUserId,
+            List<String> recipientIds) {
+        recipientIds.stream()
+                .distinct()
+                .forEach(recipientId -> {
+                    ConversationResponse preview = getConversationPreviewForUser(conversationId, recipientId);
+                    messagingTemplate.convertAndSendToUser(
+                            recipientId,
+                            CONVERSATION_QUEUE,
+                            buildConversationEvent(EVENT_UPSERT, conversationId, actorUserId, targetUserId, preview)
+                    );
+                });
+    }
+
+    private void publishConversationRemoved(
+            String conversationId,
+            String actorUserId,
+            String targetUserId,
+            List<String> recipientIds) {
+        ConversationRealtimeEventResponse event = buildConversationEvent(
+                EVENT_REMOVED,
+                conversationId,
+                actorUserId,
+                targetUserId,
+                null
+        );
+        recipientIds.stream()
+                .distinct()
+                .forEach(recipientId -> messagingTemplate.convertAndSendToUser(recipientId, CONVERSATION_QUEUE, event));
+    }
+
+    private ConversationRealtimeEventResponse buildConversationEvent(
+            String eventType,
+            String conversationId,
+            String actorUserId,
+            String targetUserId,
+            ConversationResponse conversation) {
+        return ConversationRealtimeEventResponse.builder()
+                .eventType(eventType)
+                .conversationId(conversationId)
+                .actorUserId(actorUserId)
+                .targetUserId(targetUserId)
+                .conversation(conversation)
+                .occurredAt(LocalDateTime.now())
+                .build();
     }
 }

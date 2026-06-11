@@ -28,6 +28,9 @@ public class ConversationMember {
     @Column(length = 100)
     private String nickname;
 
+    @Column(name = "muted_until")
+    private LocalDateTime mutedUntil;
+
     @CreationTimestamp
     @Column(name = "joined_at", updatable = false)
     private LocalDateTime joinedAt;

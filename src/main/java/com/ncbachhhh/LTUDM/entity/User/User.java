@@ -88,6 +88,9 @@ public class User {
     @Column(name = "sound_enabled", nullable = false)
     private boolean soundEnabled = true;
 
+    @Column(name = "notification_sound", nullable = false, length = 100)
+    private String notificationSound = "default";
+
     @Column(name = "theme_mode", nullable = false, length = 10)
     private String themeMode = "light";
 

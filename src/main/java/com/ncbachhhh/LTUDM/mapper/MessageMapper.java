@@ -23,5 +23,7 @@ public interface MessageMapper {
     @Mapping(target = "pinned", ignore = true)
     @Mapping(target = "pinnedBy", ignore = true)
     @Mapping(target = "pinnedAt", ignore = true)
+    @Mapping(target = "replyToMessage", ignore = true)
+    @Mapping(target = "seenBy", ignore = true)
     MessageResponse toMessageResponse(Message message);
 }

@@ -50,7 +50,12 @@ public class UserResponse {
     boolean mentionSuggestions;
     boolean readReceipts;
     boolean notificationEnabled;
+
+    @JsonProperty("sound_enabled")
     boolean soundEnabled;
+
+    @JsonProperty("notification_sound")
+    String notificationSound;
 
     @JsonProperty("theme_mode")
     String themeMode;

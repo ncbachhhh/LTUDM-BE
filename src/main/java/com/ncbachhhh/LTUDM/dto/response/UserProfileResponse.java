@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,6 +27,12 @@ public class UserProfileResponse {
 
     @JsonProperty("background_url")
     String backgroundUrl;
+
+    String gender;
+    LocalDate dob;
+    String phone;
+    String nickname;
+    String bio;
 
     @JsonProperty("friendship_status")
     String friendshipStatus;

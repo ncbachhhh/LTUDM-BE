@@ -63,6 +63,7 @@ public interface MessageRepository extends JpaRepository<Message, String> {
             FROM Message m
             WHERE m.conversationId = :conversationId
               AND m.type = :type
+              AND m.recalled = false
               AND NOT EXISTS (
                   SELECT 1
                   FROM MessageDeletion md
@@ -81,6 +82,28 @@ public interface MessageRepository extends JpaRepository<Message, String> {
             FROM Message m
             WHERE m.conversationId = :conversationId
               AND m.type = com.ncbachhhh.LTUDM.entity.Message.MessageType.TEXT
+              AND m.recalled = false
+              AND m.content IS NOT NULL
+              AND LOWER(m.content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM MessageDeletion md
+                  WHERE md.id.messageId = m.id
+                    AND md.id.userId = :userId
+              )
+            ORDER BY m.createdAt DESC
+            """)
+    Page<Message> searchVisibleTextMessages(@Param("conversationId") String conversationId,
+                                            @Param("userId") String userId,
+                                            @Param("keyword") String keyword,
+                                            Pageable pageable);
+
+    @Query("""
+            SELECT m
+            FROM Message m
+            WHERE m.conversationId = :conversationId
+              AND m.type = com.ncbachhhh.LTUDM.entity.Message.MessageType.TEXT
+              AND m.recalled = false
               AND m.content IS NOT NULL
               AND (
                   LOWER(m.content) LIKE '%http://%'

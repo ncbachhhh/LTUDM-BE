@@ -32,6 +32,11 @@ public class ConversationResponse {
     @JsonProperty("avatar_url")
     String avatarUrl;
 
+    String emoji;
+
+    @JsonProperty("muted_until")
+    LocalDateTime mutedUntil;
+
     @JsonProperty("latest_message")
     MessageResponse latestMessage;
 

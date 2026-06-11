@@ -1,6 +1,7 @@
 package com.ncbachhhh.LTUDM.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,5 +20,9 @@ public class ResetPasswordRequest {
 
     @NotBlank(message = "INVALID_PASSWORD_FORMAT")
     @Size(min = 8, message = "INVALID_PASSWORD_FORMAT")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
+            message = "INVALID_PASSWORD_FORMAT"
+    )
     String newPassword;
 }

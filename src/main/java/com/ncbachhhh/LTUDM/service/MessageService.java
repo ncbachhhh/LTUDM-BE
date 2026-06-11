@@ -3,6 +3,8 @@ package com.ncbachhhh.LTUDM.service;
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
 import com.ncbachhhh.LTUDM.dto.response.AttachmentResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationLinkResponse;
+import com.ncbachhhh.LTUDM.dto.response.MessageSeenByResponse;
+import com.ncbachhhh.LTUDM.dto.response.MessageReplyResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
 import com.ncbachhhh.LTUDM.entity.Attachment.Attachment;
 import com.ncbachhhh.LTUDM.entity.Conversation.Conversation;
@@ -15,6 +17,7 @@ import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import com.ncbachhhh.LTUDM.entity.MessageDeletion.MessageDeletion;
 import com.ncbachhhh.LTUDM.entity.MessageReceipt.MessageReceipt;
 import com.ncbachhhh.LTUDM.entity.PinnedMessage.PinnedMessage;
+import com.ncbachhhh.LTUDM.entity.User.User;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.mapper.MessageMapper;
@@ -25,6 +28,7 @@ import com.ncbachhhh.LTUDM.repository.MessageDeletionRepository;
 import com.ncbachhhh.LTUDM.repository.MessageReceiptRepository;
 import com.ncbachhhh.LTUDM.repository.MessageRepository;
 import com.ncbachhhh.LTUDM.repository.PinnedMessageRepository;
+import com.ncbachhhh.LTUDM.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -58,6 +62,7 @@ public class MessageService {
     ConversationRepository conversationRepository;
     AttachmentRepository attachmentRepository;
     PinnedMessageRepository pinnedMessageRepository;
+    UserRepository userRepository;
     MessageMapper messageMapper;
     R2StorageService r2StorageService;
     RelationshipService relationshipService;
@@ -94,6 +99,7 @@ public class MessageService {
         if (message.getType() == null) {
             message.setType(MessageType.TEXT);
         }
+        message.setReplyToMessageId(resolveReplyToMessageId(request, senderId));
         message.setContent(resolveMessageContent(request, file, senderId, message.getType()));
 
         Message savedMessage = messageRepository.save(message);
@@ -146,6 +152,33 @@ public class MessageService {
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
 
+    public Page<MessageResponse> searchMessages(String conversationId, String keyword, int page, int size) {
+        String userId = getCurrentUserId();
+        ensureCanAccessConversation(conversationId, userId);
+
+        if (!StringUtils.hasText(keyword) || keyword.trim().length() < 2) {
+            throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
+        }
+
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(1, Math.min(size, 50)));
+        Page<Message> messages = messageRepository.searchVisibleTextMessages(
+                conversationId,
+                userId,
+                keyword.trim(),
+                pageable
+        );
+        Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messages.getContent());
+        Map<String, PinnedMessage> pinnedByMessageId = getPinnedMessagesByMessageId(messages.getContent());
+        List<MessageResponse> content = messages.getContent().stream()
+                .map(message -> toMessageResponse(
+                        message,
+                        userId,
+                        attachmentsByMessageId.get(message.getId()),
+                        pinnedByMessageId.get(message.getId())))
+                .toList();
+        return new PageImpl<>(content, pageable, messages.getTotalElements());
+    }
+
     @Transactional
     public MessageResponse pinMessage(String messageId) {
         String userId = getCurrentUserId();
@@ -170,12 +203,34 @@ public class MessageService {
     }
 
     @Transactional
-    public void unpinMessage(String messageId) {
+    public MessageResponse unpinMessage(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
         ensureCanAccessConversation(message.getConversationId(), userId);
         pinnedMessageRepository.deleteById(messageId);
+        return toMessageResponse(message, userId, getAttachment(messageId), null);
+    }
+
+    @Transactional
+    public MessageResponse recallMessage(String messageId) {
+        String userId = getCurrentUserId();
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
+        ensureCanAccessConversation(message.getConversationId(), userId);
+
+        if (!message.getSenderId().equals(userId)) {
+            throw new AppException(ErrorCode.CANNOT_RECALL_OTHERS_MESSAGE);
+        }
+
+        if (!message.isRecalled()) {
+            message.setRecalled(true);
+            message.setRecalledAt(LocalDateTime.now());
+            message.setRecalledBy(userId);
+            message = messageRepository.save(message);
+        }
+
+        return toMessageResponse(message, userId);
     }
 
     public List<MessageResponse> getPinnedMessages(String conversationId) {
@@ -257,14 +312,14 @@ public class MessageService {
         return new PageImpl<>(links.subList(start, end), pageable, links.size());
     }
 
-    public void markAsRead(String messageId) {
+    public MessageSeenByResponse markAsRead(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
         ensureCanAccessConversation(message.getConversationId(), userId);
 
         if (message.getSenderId().equals(userId)) {
-            return;
+            return null;
         }
 
         MessageReceiptId receiptId = new MessageReceiptId(messageId, userId);
@@ -273,14 +328,18 @@ public class MessageService {
             receipt.setId(receiptId);
             receipt.setSeenAt(LocalDateTime.now());
             messageReceiptRepository.save(receipt);
+            return toSeenByResponse(receipt, message.getConversationId());
         }
+        return messageReceiptRepository.findById(receiptId)
+                .map(receipt -> toSeenByResponse(receipt, message.getConversationId()))
+                .orElse(null);
     }
 
-    public void markAllAsRead(String conversationId) {
-        markAllAsRead(conversationId, getCurrentUserId());
+    public List<MessageReceipt> markAllAsRead(String conversationId) {
+        return markAllAsRead(conversationId, getCurrentUserId());
     }
 
-    public void markAllAsRead(String conversationId, String userId) {
+    public List<MessageReceipt> markAllAsRead(String conversationId, String userId) {
         ensureCanAccessConversation(conversationId, userId);
 
         List<Message> messages = messageRepository.findVisibleMessagesByConversation(conversationId, userId);
@@ -299,6 +358,7 @@ public class MessageService {
         if (!newReceipts.isEmpty()) {
             messageReceiptRepository.saveAll(newReceipts);
         }
+        return newReceipts;
     }
 
     public void deleteMessage(String messageId) {
@@ -344,12 +404,66 @@ public class MessageService {
 
     private MessageResponse toMessageResponse(Message message, String userId, Attachment attachment, PinnedMessage pinnedMessage) {
         MessageResponse response = messageMapper.toMessageResponse(message);
+        if (message.isRecalled()) {
+            response.setContent(null);
+            attachment = null;
+        }
         response.setRead(messageReceiptRepository.existsById(new MessageReceiptId(message.getId(), userId)));
+        response.setSeenBy(buildSeenByResponses(message));
         response.setAttachment(toAttachmentResponse(attachment));
         response.setPinned(pinnedMessage != null);
         response.setPinnedBy(pinnedMessage == null ? null : pinnedMessage.getPinnedBy());
         response.setPinnedAt(pinnedMessage == null ? null : pinnedMessage.getPinnedAt());
+        response.setReplyToMessage(buildReplyResponse(message.getReplyToMessageId(), userId));
         return response;
+    }
+
+    public MessageSeenByResponse toSeenByResponse(MessageReceipt receipt, String conversationId) {
+        if (receipt == null || receipt.getId() == null) {
+            return null;
+        }
+
+        String readerId = receipt.getId().getUserId();
+        User user = userRepository.findById(readerId).orElse(null);
+        ConversationMember member = conversationMemberRepository
+                .findByIdConversationId(conversationId)
+                .stream()
+                .filter(candidate -> candidate.getId().getUserId().equals(readerId))
+                .findFirst()
+                .orElse(null);
+
+        return MessageSeenByResponse.builder()
+                .userId(readerId)
+                .username(user == null ? null : user.getUsername())
+                .displayName(user == null ? null : user.getDisplayName())
+                .nickname(member == null ? null : member.getNickname())
+                .avatarUrl(user == null ? null : user.getAvatarUrl())
+                .seenAt(receipt.getSeenAt())
+                .build();
+    }
+
+    private List<MessageSeenByResponse> buildSeenByResponses(Message message) {
+        return messageReceiptRepository.findByIdMessageId(message.getId()).stream()
+                .filter(receipt -> !receipt.getId().getUserId().equals(message.getSenderId()))
+                .map(receipt -> toSeenByResponse(receipt, message.getConversationId()))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private MessageReplyResponse buildReplyResponse(String replyToMessageId, String userId) {
+        if (!StringUtils.hasText(replyToMessageId) || isDeletedForUser(replyToMessageId, userId)) {
+            return null;
+        }
+
+        return messageRepository.findById(replyToMessageId)
+                .map(message -> MessageReplyResponse.builder()
+                        .id(message.getId())
+                        .senderId(message.getSenderId())
+                        .type(message.getType())
+                        .content(message.isRecalled() ? null : message.getContent())
+                        .recalled(message.isRecalled())
+                        .build())
+                .orElse(null);
     }
 
     private Page<MessageResponse> getConversationMessagesByType(
@@ -425,6 +539,23 @@ public class MessageService {
             trimmed = trimmed.substring(0, trimmed.length() - 1);
         }
         return trimmed;
+    }
+
+    private String resolveReplyToMessageId(MessageRequest request, String senderId) {
+        String replyToMessageId = request.getReplyToMessageId();
+        if (!StringUtils.hasText(replyToMessageId)) {
+            return null;
+        }
+
+        Message repliedMessage = getVisibleMessageForUser(replyToMessageId, senderId);
+        if (!Objects.equals(repliedMessage.getConversationId(), request.getConversationId())) {
+            throw new AppException(ErrorCode.MESSAGE_NOT_FOUND);
+        }
+        if (repliedMessage.isRecalled()) {
+            throw new AppException(ErrorCode.CANNOT_REPLY_RECALLED_MESSAGE);
+        }
+
+        return repliedMessage.getId();
     }
 
     private Attachment createAttachmentIfNeeded(Message message, MultipartFile file) {

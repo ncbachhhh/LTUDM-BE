@@ -23,7 +23,13 @@ public class UserSettingsUpdateRequest {
     Boolean mentionSuggestions;
     Boolean readReceipts;
     Boolean notificationEnabled;
+
+    @JsonProperty("sound_enabled")
     Boolean soundEnabled;
+
+    @JsonProperty("notification_sound")
+    @Pattern(regexp = "^(default|sound2|sound3|sound4|sound5|sound6|sound7|sound8)$", message = "INVALID_NOTIFICATION_SOUND")
+    String notificationSound;
 
     @JsonProperty("theme_mode")
     @Pattern(regexp = "^(light|dark)$", message = "INVALID_THEME_MODE")

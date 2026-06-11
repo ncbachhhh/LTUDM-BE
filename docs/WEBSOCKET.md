@@ -48,6 +48,7 @@ Khi SUBSCRIBE hoac SEND den destination tren:
 ```
 
 Nhan `MessageResponse` moi khi REST multipart hoac STOMP send message thanh cong.
+Endpoint nay cung nhan `MessageResponse` cap nhat khi tin nhan bi recall, ghim hoac bo ghim.
 
 ### Conversation Read Event
 
@@ -55,7 +56,26 @@ Nhan `MessageResponse` moi khi REST multipart hoac STOMP send message thanh cong
 /topic/conversation/{conversationId}/read
 ```
 
-Nhan text event khi user mark all read qua STOMP.
+Nhan `MessageReadEventResponse` khi user mark all read qua STOMP hoac REST.
+
+Payload:
+
+```json
+{
+  "event_type": "MESSAGES_READ",
+  "conversation_id": "conversationId",
+  "reader": {
+    "user_id": "readerUserId",
+    "display_name": "Reader Name",
+    "nickname": "Optional nickname",
+    "seen_at": "2026-06-07T21:00:00"
+  },
+  "message_ids": ["messageId1", "messageId2"],
+  "occurred_at": "2026-06-07T21:00:00"
+}
+```
+
+Client dung event nay de append `reader` vao `seen_by` cua cac message trong `message_ids`.
 
 ### Typing Indicator
 
@@ -81,10 +101,36 @@ Server override `userId` bang authenticated principal.
 /user/queue/conversations
 ```
 
-Nhan `ConversationResponse` moi khi:
+Nhan `ConversationResponse` hoac `ConversationRealtimeEventResponse` moi khi:
 
 - Co message moi trong conversation.
 - Current user mark all read.
+- Conversation duoc tao.
+- Thanh vien duoc them, bi xoa/kick, roi nhom.
+- Avatar/metadata conversation duoc cap nhat.
+- Biet danh thanh vien duoc cap nhat.
+- Truong nhom duoc chuyen.
+- Conversation bi an/xoa/giai tan voi user hien tai.
+
+Payload moi cho cac thao tac quan tri conversation:
+
+```json
+{
+  "event_type": "CONVERSATION_UPSERT",
+  "conversation_id": "conversationId",
+  "actor_user_id": "userIdThucHien",
+  "target_user_id": "userIdBiTacDongNeuCo",
+  "conversation": {
+    "id": "conversationId"
+  },
+  "occurred_at": "2026-06-07T16:30:00"
+}
+```
+
+`event_type`:
+
+- `CONVERSATION_UPSERT`: merge `conversation` vao danh sach chat va refresh info neu dang mo conversation.
+- `CONVERSATION_REMOVED`: xoa `conversation_id` khoi danh sach chat cua user nhan event.
 
 ### Presence
 
@@ -135,7 +181,7 @@ Behavior:
 
 - Mark all visible messages as read cho authenticated user.
 - Push conversation preview den `/user/queue/conversations`.
-- Broadcast text event den `/topic/conversation/{conversationId}/read`.
+- Broadcast `MESSAGES_READ` event den `/topic/conversation/{conversationId}/read`.
 
 ### Typing
 

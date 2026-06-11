@@ -9,7 +9,7 @@ USE `LTUDM`;
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
+/*!50503 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -86,6 +86,7 @@ CREATE TABLE `conversation_members` (
   `user_id` char(36) NOT NULL,
   `role` enum('OWNER','ADMIN','MEMBER') DEFAULT 'MEMBER',
   `nickname` varchar(100) DEFAULT NULL,
+  `muted_until` datetime DEFAULT NULL,
   `joined_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`conversation_id`,`user_id`),
   KEY `user_id` (`user_id`),
@@ -101,15 +102,15 @@ CREATE TABLE `conversation_members` (
 LOCK TABLES `conversation_members` WRITE;
 /*!40000 ALTER TABLE `conversation_members` DISABLE KEYS */;
 INSERT INTO `conversation_members` VALUES
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','11111111-1111-1111-1111-111111111111','OWNER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','22222222-2222-2222-2222-222222222222','MEMBER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','11111111-1111-1111-1111-111111111111','OWNER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','22222222-2222-2222-2222-222222222222','OWNER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','11111111-1111-1111-1111-111111111111','OWNER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','22222222-2222-2222-2222-222222222222','MEMBER',NULL,'2026-06-02 00:00:00'),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','33333333-3333-3333-3333-333333333333','MEMBER',NULL,'2026-06-02 00:00:00');
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','11111111-1111-1111-1111-111111111111','OWNER','Anh A',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','22222222-2222-2222-2222-222222222222','MEMBER','Anh B',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','11111111-1111-1111-1111-111111111111','OWNER','Anh A',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','33333333-3333-3333-3333-333333333333','MEMBER','Anh C',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','22222222-2222-2222-2222-222222222222','OWNER','Anh B',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','33333333-3333-3333-3333-333333333333','MEMBER','Anh C',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','11111111-1111-1111-1111-111111111111','OWNER','Anh A',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','22222222-2222-2222-2222-222222222222','MEMBER','Anh B',NULL,'2026-06-02 00:00:00'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','33333333-3333-3333-3333-333333333333','MEMBER','Anh C',NULL,'2026-06-02 00:00:00');
 /*!40000 ALTER TABLE `conversation_members` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -127,6 +128,7 @@ CREATE TABLE `conversations` (
   `created_by` char(36) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `avatar_url` varchar(700) DEFAULT NULL,
+  `emoji` varchar(20) NOT NULL DEFAULT '👍',
   PRIMARY KEY (`id`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `conversations_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
@@ -140,11 +142,38 @@ CREATE TABLE `conversations` (
 LOCK TABLES `conversations` WRITE;
 /*!40000 ALTER TABLE `conversations` DISABLE KEYS */;
 INSERT INTO `conversations` VALUES
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','DIRECT',NULL,'11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00',NULL),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','DIRECT',NULL,'11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00',NULL),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','DIRECT',NULL,'22222222-2222-2222-2222-222222222222','2026-06-02 00:00:00',NULL),
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','GROUP','Group chat chung','11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00',NULL);
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','DIRECT','Nguyen Van A - Pham Van B','11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00','https://api.dicebear.com/9.x/initials/svg?seed=AB','👍'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','DIRECT','Nguyen Van A - Bui Van C','11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00','https://api.dicebear.com/9.x/initials/svg?seed=AC','👍'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','DIRECT','Pham Van B - Bui Van C','22222222-2222-2222-2222-222222222222','2026-06-02 00:00:00','https://api.dicebear.com/9.x/initials/svg?seed=BC','👍'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4','GROUP','Group chat chung','11111111-1111-1111-1111-111111111111','2026-06-02 00:00:00','https://api.dicebear.com/9.x/initials/svg?seed=LTUDM','👍');
 /*!40000 ALTER TABLE `conversations` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `conversation_deletions`
+--
+
+DROP TABLE IF EXISTS `conversation_deletions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `conversation_deletions` (
+  `conversation_id` char(36) NOT NULL,
+  `user_id` char(36) NOT NULL,
+  `deleted_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`conversation_id`,`user_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `conversation_deletions_ibfk_1` FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `conversation_deletions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `conversation_deletions`
+--
+
+LOCK TABLES `conversation_deletions` WRITE;
+/*!40000 ALTER TABLE `conversation_deletions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `conversation_deletions` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -303,6 +332,7 @@ CREATE TABLE `messages` (
   `sender_id` char(36) NOT NULL,
   `type` enum('TEXT','FILE','IMAGE','SYSTEM') DEFAULT 'TEXT',
   `content` text,
+  `reply_to_message_id` char(36) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_edited` tinyint(1) DEFAULT '0',
   `edited_at` datetime DEFAULT NULL,
@@ -312,10 +342,12 @@ CREATE TABLE `messages` (
   PRIMARY KEY (`id`),
   KEY `conversation_id` (`conversation_id`),
   KEY `sender_id` (`sender_id`),
+  KEY `reply_to_message_id` (`reply_to_message_id`),
   KEY `recalled_by` (`recalled_by`),
   CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `messages_ibfk_3` FOREIGN KEY (`recalled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+  CONSTRAINT `messages_ibfk_3` FOREIGN KEY (`recalled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `messages_ibfk_4` FOREIGN KEY (`reply_to_message_id`) REFERENCES `messages` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -358,11 +390,13 @@ CREATE TABLE `users` (
   `read_receipts` tinyint(1) NOT NULL DEFAULT '1',
   `notification_enabled` tinyint(1) NOT NULL DEFAULT '1',
   `sound_enabled` tinyint(1) NOT NULL DEFAULT '1',
+  `notification_sound` varchar(100) NOT NULL DEFAULT 'default',
   `theme_mode` varchar(10) NOT NULL DEFAULT 'light',
   `chat_color` varchar(500) NOT NULL DEFAULT '#0A84FF',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   UNIQUE KEY `username` (`username`),
+  CONSTRAINT `chk_notification_sound` CHECK ((`notification_sound` in (_utf8mb4'default',_utf8mb4'sound2',_utf8mb4'sound3',_utf8mb4'sound4',_utf8mb4'sound5',_utf8mb4'sound6',_utf8mb4'sound7',_utf8mb4'sound8'))),
   CONSTRAINT `chk_theme_mode` CHECK ((`theme_mode` in (_utf8mb4'light',_utf8mb4'dark'))),
   CONSTRAINT `chk_chat_color` CHECK (((not(regexp_like(lower(`chat_color`),_utf8mb4'url[[:space:]]*\\('))) and regexp_like(`chat_color`,_utf8mb4'^[^;{}<>]{1,500}$')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -374,10 +408,10 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` (`id`,`email`,`username`,`password_hash`,`display_name`,`avatar_url`,`created_at`,`role`,`is_active`,`chat_color`) VALUES
-('11111111-1111-1111-1111-111111111111','user1@gmail.com','user1','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Nguyen Van A',NULL,'2026-06-02 00:00:00','USER',1,'#0A84FF'),
-('22222222-2222-2222-2222-222222222222','user2@gmail.com','user2','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Pham Van B',NULL,'2026-06-02 00:00:00','USER',1,'#34C759'),
-('33333333-3333-3333-3333-333333333333','user3@gmail.com','user3','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Bui Van C',NULL,'2026-06-02 00:00:00','USER',1,'#FF9500');
+INSERT INTO `users` (`id`,`email`,`username`,`password_hash`,`display_name`,`avatar_url`,`background_url`,`gender`,`dob`,`phone`,`nickname`,`bio`,`created_at`,`role`,`is_active`,`notification_sound`,`chat_color`) VALUES
+('11111111-1111-1111-1111-111111111111','user1@gmail.com','user1','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Nguyen Van A','https://api.dicebear.com/9.x/initials/svg?seed=Nguyen%20Van%20A','https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80','male','2000-01-15','0901000001','Anh A','Thich lap trinh va tro chuyen cung ban be.','2026-06-02 00:00:00','USER',1,'default','#0A84FF'),
+('22222222-2222-2222-2222-222222222222','user2@gmail.com','user2','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Pham Van B','https://api.dicebear.com/9.x/initials/svg?seed=Pham%20Van%20B','https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80','male','2001-03-20','0902000002','Anh B','Quan tam den cong nghe va thiet ke san pham.','2026-06-02 00:00:00','USER',1,'default','#34C759'),
+('33333333-3333-3333-3333-333333333333','user3@gmail.com','user3','$2a$10$mu796U3EB6T.AWUZcvT3x.I2V9ZYQBDcGk7Y5MiMRXNlK9Dcaf5Ma','Bui Van C','https://api.dicebear.com/9.x/initials/svg?seed=Bui%20Van%20C','https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80','male','2002-07-10','0903000003','Anh C','Yeu thich hoc hoi va xay dung ung dung chat.','2026-06-02 00:00:00','USER',1,'default','#FF9500');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

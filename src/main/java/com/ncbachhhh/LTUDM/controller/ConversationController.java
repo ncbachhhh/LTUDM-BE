@@ -2,6 +2,8 @@ package com.ncbachhhh.LTUDM.controller;
 
 import com.ncbachhhh.LTUDM.dto.request.AddConversationMembersRequest;
 import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
+import com.ncbachhhh.LTUDM.dto.request.MuteConversationRequest;
+import com.ncbachhhh.LTUDM.dto.request.UpdateConversationEmojiRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
@@ -63,6 +65,25 @@ public class ConversationController {
         return ApiResponse.success(conversationService.updateMemberNickname(conversationId, memberId, request));
     }
 
+    @PatchMapping("/{conversationId}/emoji")
+    ApiResponse<ConversationResponse> updateConversationEmoji(
+            @PathVariable String conversationId,
+            @RequestBody @Valid UpdateConversationEmojiRequest request) {
+        return ApiResponse.success(conversationService.updateConversationEmoji(conversationId, request));
+    }
+
+    @PatchMapping("/{conversationId}/mute")
+    ApiResponse<ConversationResponse> muteConversation(
+            @PathVariable String conversationId,
+            @RequestBody @Valid MuteConversationRequest request) {
+        return ApiResponse.success(conversationService.muteConversation(conversationId, request));
+    }
+
+    @DeleteMapping("/{conversationId}/mute")
+    ApiResponse<ConversationResponse> unmuteConversation(@PathVariable String conversationId) {
+        return ApiResponse.success(conversationService.unmuteConversation(conversationId));
+    }
+
     @PostMapping(value = "/{conversationId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<ConversationResponse> updateGroupAvatar(
             @PathVariable String conversationId,
@@ -81,5 +102,30 @@ public class ConversationController {
     ApiResponse<String> deleteGroupConversation(@PathVariable String conversationId) {
         conversationService.deleteGroupConversation(conversationId);
         return ApiResponse.success("Group conversation deleted.");
+    }
+
+    @DeleteMapping("/{conversationId}/me")
+    ApiResponse<String> deleteConversationForMe(@PathVariable String conversationId) {
+        conversationService.deleteConversationForCurrentUser(conversationId);
+        return ApiResponse.success("Conversation deleted for current user.");
+    }
+
+    @DeleteMapping("/{conversationId}/members/me")
+    ApiResponse<ConversationResponse> leaveGroupConversation(@PathVariable String conversationId) {
+        return ApiResponse.success(conversationService.leaveGroupConversation(conversationId));
+    }
+
+    @DeleteMapping("/{conversationId}/members/{memberId}")
+    ApiResponse<ConversationResponse> removeGroupMember(
+            @PathVariable String conversationId,
+            @PathVariable String memberId) {
+        return ApiResponse.success(conversationService.removeGroupMember(conversationId, memberId));
+    }
+
+    @PatchMapping("/{conversationId}/owner/{memberId}")
+    ApiResponse<ConversationResponse> transferGroupOwnership(
+            @PathVariable String conversationId,
+            @PathVariable String memberId) {
+        return ApiResponse.success(conversationService.transferGroupOwnership(conversationId, memberId));
     }
 }

@@ -4,7 +4,9 @@ import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationLinkResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
+import com.ncbachhhh.LTUDM.dto.response.MessageReadEventResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
+import com.ncbachhhh.LTUDM.entity.MessageReceipt.MessageReceipt;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
 import com.ncbachhhh.LTUDM.service.ConversationService;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/messages")
@@ -57,6 +60,15 @@ public class MessageController {
         return ApiResponse.success(messageService.getMessagesByConversationPaged(conversationId, page, size));
     }
 
+    @GetMapping("/conversation/{conversationId}/search")
+    ApiResponse<Page<MessageResponse>> searchMessages(
+            @PathVariable String conversationId,
+            @RequestParam("keyword") String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(messageService.searchMessages(conversationId, keyword, page, size));
+    }
+
     @PutMapping("/{messageId}/read")
     ApiResponse<String> markAsRead(@PathVariable String messageId) {
         messageService.markAsRead(messageId);
@@ -65,7 +77,8 @@ public class MessageController {
 
     @PutMapping("/conversation/{conversationId}/read-all")
     ApiResponse<String> markAllAsRead(@PathVariable String conversationId) {
-        messageService.markAllAsRead(conversationId);
+        List<MessageReceipt> receipts = messageService.markAllAsRead(conversationId);
+        publishReadEvent(conversationId, receipts);
         sendConversationPreviewToUser(conversationId, getCurrentUserId());
         return ApiResponse.success("All visible messages marked as read.");
     }
@@ -74,6 +87,14 @@ public class MessageController {
     ApiResponse<String> deleteMessage(@PathVariable String messageId) {
         messageService.deleteMessage(messageId);
         return ApiResponse.success("Message deleted.");
+    }
+
+    @PutMapping("/{messageId}/recall")
+    ApiResponse<MessageResponse> recallMessage(@PathVariable String messageId) {
+        MessageResponse recalledMessage = messageService.recallMessage(messageId);
+        messagingTemplate.convertAndSend("/topic/conversation/" + recalledMessage.getConversationId(), recalledMessage);
+        sendConversationPreviewToMembers(recalledMessage.getConversationId());
+        return ApiResponse.success(recalledMessage);
     }
 
     @GetMapping("/conversation/{conversationId}/unread-count")
@@ -88,13 +109,16 @@ public class MessageController {
 
     @PutMapping("/{messageId}/pin")
     ApiResponse<MessageResponse> pinMessage(@PathVariable String messageId) {
-        return ApiResponse.success(messageService.pinMessage(messageId));
+        MessageResponse pinnedMessage = messageService.pinMessage(messageId);
+        messagingTemplate.convertAndSend("/topic/conversation/" + pinnedMessage.getConversationId(), pinnedMessage);
+        return ApiResponse.success(pinnedMessage);
     }
 
     @DeleteMapping("/{messageId}/pin")
-    ApiResponse<String> unpinMessage(@PathVariable String messageId) {
-        messageService.unpinMessage(messageId);
-        return ApiResponse.success("Message unpinned.");
+    ApiResponse<MessageResponse> unpinMessage(@PathVariable String messageId) {
+        MessageResponse unpinnedMessage = messageService.unpinMessage(messageId);
+        messagingTemplate.convertAndSend("/topic/conversation/" + unpinnedMessage.getConversationId(), unpinnedMessage);
+        return ApiResponse.success(unpinnedMessage);
     }
 
     @GetMapping("/conversation/{conversationId}/pinned")
@@ -141,6 +165,23 @@ public class MessageController {
     private void sendConversationPreviewToUser(String conversationId, String userId) {
         ConversationResponse preview = conversationService.getConversationPreviewForUser(conversationId, userId);
         messagingTemplate.convertAndSendToUser(userId, "/queue/conversations", preview);
+    }
+
+    private void publishReadEvent(String conversationId, List<MessageReceipt> receipts) {
+        if (receipts == null || receipts.isEmpty()) {
+            return;
+        }
+
+        MessageReadEventResponse event = MessageReadEventResponse.builder()
+                .eventType("MESSAGES_READ")
+                .conversationId(conversationId)
+                .reader(messageService.toSeenByResponse(receipts.getFirst(), conversationId))
+                .messageIds(receipts.stream()
+                        .map(receipt -> receipt.getId().getMessageId())
+                        .toList())
+                .occurredAt(LocalDateTime.now())
+                .build();
+        messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", event);
     }
 
     private String getCurrentUserId() {

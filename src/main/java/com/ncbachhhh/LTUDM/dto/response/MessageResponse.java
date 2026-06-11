@@ -5,6 +5,7 @@ import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class MessageResponse {
@@ -20,11 +21,20 @@ public class MessageResponse {
     private String content;
     private AttachmentResponse attachment;
 
+    @JsonProperty("reply_to_message_id")
+    private String replyToMessageId;
+
+    @JsonProperty("reply_to_message")
+    private MessageReplyResponse replyToMessage;
+
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
 
     @JsonProperty("is_read")
     private boolean read;
+
+    @JsonProperty("seen_by")
+    private List<MessageSeenByResponse> seenBy;
 
     @JsonProperty("is_pinned")
     private boolean pinned;

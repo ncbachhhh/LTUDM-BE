@@ -1,8 +1,10 @@
 package com.ncbachhhh.LTUDM.websocket;
 
 import com.ncbachhhh.LTUDM.dto.request.MessageRequest;
+import com.ncbachhhh.LTUDM.dto.response.MessageReadEventResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
 import com.ncbachhhh.LTUDM.dto.response.MessageResponse;
+import com.ncbachhhh.LTUDM.entity.MessageReceipt.MessageReceipt;
 import com.ncbachhhh.LTUDM.entity.Message.MessageType;
 import com.ncbachhhh.LTUDM.exception.AppException;
 import com.ncbachhhh.LTUDM.exception.ErrorCode;
@@ -19,6 +21,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
@@ -48,9 +52,9 @@ public class ChatWebSocketController {
     @MessageMapping("/chat/{conversationId}/read")
     public void markAsRead(@DestinationVariable String conversationId, Principal principal) {
         String userId = requireUserId(principal);
-        messageService.markAllAsRead(conversationId, userId);
+        List<MessageReceipt> receipts = messageService.markAllAsRead(conversationId, userId);
         sendConversationPreviewToUser(conversationId, userId);
-        messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", "Messages marked as read.");
+        publishReadEvent(conversationId, receipts);
     }
 
     @MessageMapping("/chat/{conversationId}/typing")
@@ -85,6 +89,23 @@ public class ChatWebSocketController {
     private void sendConversationPreviewToUser(String conversationId, String userId) {
         ConversationResponse preview = conversationService.getConversationPreviewForUser(conversationId, userId);
         messagingTemplate.convertAndSendToUser(userId, "/queue/conversations", preview);
+    }
+
+    private void publishReadEvent(String conversationId, List<MessageReceipt> receipts) {
+        if (receipts == null || receipts.isEmpty()) {
+            return;
+        }
+
+        MessageReadEventResponse event = MessageReadEventResponse.builder()
+                .eventType("MESSAGES_READ")
+                .conversationId(conversationId)
+                .reader(messageService.toSeenByResponse(receipts.getFirst(), conversationId))
+                .messageIds(receipts.stream()
+                        .map(receipt -> receipt.getId().getMessageId())
+                        .toList())
+                .occurredAt(LocalDateTime.now())
+                .build();
+        messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", event);
     }
 
     public record TypingIndicator(String userId, String displayName, boolean isTyping) {

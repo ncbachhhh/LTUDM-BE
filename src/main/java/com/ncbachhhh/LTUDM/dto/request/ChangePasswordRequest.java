@@ -2,6 +2,7 @@ package com.ncbachhhh.LTUDM.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,10 @@ public class ChangePasswordRequest {
 
     @NotBlank(message = "NEW_PASSWORD_REQUIRED")
     @Size(min = 8, message = "INVALID_PASSWORD_FORMAT")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
+            message = "INVALID_PASSWORD_FORMAT"
+    )
     @JsonAlias({"new_password", "newPassword"})
     String newPassword;
 

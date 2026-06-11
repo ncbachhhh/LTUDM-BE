@@ -39,4 +39,7 @@ public class Conversation {
 
     @Column(name = "avatar_url", length = 700)
     private String avatarUrl;
+
+    @Column(length = 20, nullable = false)
+    private String emoji = "👍";
 }

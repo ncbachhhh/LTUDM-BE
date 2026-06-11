@@ -26,11 +26,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserService {
+    private static final int GENERATED_USERNAME_MAX_LENGTH = 20;
+    private static final Pattern USERNAME_SAFE_CHARS = Pattern.compile("[^a-z0-9_]");
+
     UserRepository userRepository;
     PresenceService presenceService;
     PasswordEncoder passwordEncoder;
@@ -39,14 +43,20 @@ public class UserService {
     RelationshipService relationshipService;
 
     public UserResponse createUser(UserRegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String username = resolveRegistrationUsername(request.getUsername(), email);
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new AppException(ErrorCode.USERNAME_ALREADY_EXISTS);
         }
 
         User user = userMapper.toUser(request);
+        user.setEmail(email);
+        user.setUsername(username);
+        user.setDisplayName(request.getDisplayName().trim());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         if (user.getRole() == null) {
             user.setRole(UserRole.USER);
@@ -54,6 +64,35 @@ public class UserService {
         user.setActive(true);
 
         return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    private String resolveRegistrationUsername(String requestedUsername, String email) {
+        if (StringUtils.hasText(requestedUsername)) {
+            return requestedUsername.trim();
+        }
+
+        String emailLocalPart = email.substring(0, email.indexOf('@'));
+        String baseUsername = USERNAME_SAFE_CHARS.matcher(emailLocalPart.toLowerCase(Locale.ROOT))
+                .replaceAll("_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_|_$", "");
+
+        if (baseUsername.length() < 3) {
+            baseUsername = "user_" + baseUsername;
+        }
+        if (baseUsername.length() > GENERATED_USERNAME_MAX_LENGTH) {
+            baseUsername = baseUsername.substring(0, GENERATED_USERNAME_MAX_LENGTH);
+        }
+
+        String username = baseUsername;
+        int suffix = 1;
+        while (userRepository.existsByUsernameIgnoreCase(username)) {
+            String suffixText = "_" + suffix++;
+            int baseLength = Math.min(baseUsername.length(), GENERATED_USERNAME_MAX_LENGTH - suffixText.length());
+            username = baseUsername.substring(0, baseLength) + suffixText;
+        }
+
+        return username;
     }
 
     public UserResponse getMyInfo() {
@@ -196,11 +235,14 @@ public class UserService {
         if (request.getSoundEnabled() != null) {
             user.setSoundEnabled(request.getSoundEnabled());
         }
+        if (request.getNotificationSound() != null) {
+            user.setNotificationSound(request.getNotificationSound().trim().toLowerCase(Locale.ROOT));
+        }
         if (request.getThemeMode() != null) {
             user.setThemeMode(request.getThemeMode().trim().toLowerCase(Locale.ROOT));
         }
         if (request.getChatColor() != null) {
-            user.setChatColor(request.getChatColor().trim().toUpperCase(Locale.ROOT));
+            user.setChatColor(request.getChatColor().trim());
         }
 
         return userMapper.toUserResponse(userRepository.save(user));
@@ -262,6 +304,11 @@ public class UserService {
                 .displayName(user.getDisplayName())
                 .avatarUrl(user.getAvatarUrl())
                 .backgroundUrl(user.getBackgroundUrl())
+                .gender(user.getGender())
+                .dob(user.getDob())
+                .phone(user.getPhone())
+                .nickname(user.getNickname())
+                .bio(user.getBio())
                 .friendshipStatus(relationship.status())
                 .friendshipDirection(relationship.direction())
                 .online(presenceService.isOnline(user.getId()))

@@ -29,6 +29,11 @@ public class ConversationInfoResponse {
     @JsonProperty("avatar_url")
     String avatarUrl;
 
+    String emoji;
+
+    @JsonProperty("muted_until")
+    LocalDateTime mutedUntil;
+
     String status;
 
     @JsonProperty("created_by")
