@@ -1,0 +1,197 @@
+@startuml LTUDM_Database_Class_Diagram
+
+title LTUDM Database Class Diagram
+
+' Smetana + ortho usually gives cleaner routing than the default layout.
+!pragma layout smetana
+
+left to right direction
+skinparam linetype ortho
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam nodesep 70
+skinparam ranksep 80
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #444444
+}
+
+entity users {
+  * id : char(36) <<PK>>
+  --
+  email : varchar(255) <<UQ>>
+  username : varchar(50) <<UQ>>
+  password_hash : varchar(255)
+  display_name : varchar(100)
+  avatar_url : varchar(500)
+  background_url : varchar(500)
+  gender : varchar(20)
+  dob : date
+  phone : varchar(20)
+  nickname : varchar(50)
+  bio : varchar(500)
+  created_at : datetime
+  role : enum(ADMIN, USER)
+  is_active : boolean
+  sound_enabled : boolean
+  notification_sound : varchar(100)
+  theme_mode : varchar(10)
+  chat_color : varchar(500)
+}
+
+entity invalidated_tokens {
+  * id : varchar(255) <<PK>>
+  --
+  expiry_time : datetime(6)
+}
+
+entity friendships {
+  * id : char(36) <<PK>>
+  --
+  requester_id : char(36) <<FK>>
+  addressee_id : char(36) <<FK>>
+  status : enum(PENDING, ACCEPTED, DECLINED, BLOCKED)
+  created_at : datetime
+  updated_at : datetime
+}
+
+entity blocks {
+  * blocker_id : char(36) <<PK, FK>>
+  * blocked_id : char(36) <<PK, FK>>
+  --
+  created_at : datetime
+}
+
+entity conversations {
+  * id : char(36) <<PK>>
+  --
+  type : enum(DIRECT, GROUP)
+  title : varchar(150)
+  created_by : char(36) <<FK>>
+  created_at : datetime
+  avatar_url : varchar(700)
+  emoji : varchar(20)
+}
+
+entity conversation_members {
+  * conversation_id : char(36) <<PK, FK>>
+  * user_id : char(36) <<PK, FK>>
+  --
+  role : enum(OWNER, ADMIN, MEMBER)
+  nickname : varchar(100)
+  muted_until : datetime
+  joined_at : datetime
+}
+
+entity conversation_deletions {
+  * conversation_id : char(36) <<PK, FK>>
+  * user_id : char(36) <<PK, FK>>
+  --
+  deleted_at : datetime
+}
+
+entity messages {
+  * id : char(36) <<PK>>
+  --
+  conversation_id : char(36) <<FK>>
+  sender_id : char(36) <<FK>>
+  type : enum(TEXT, FILE, IMAGE, SYSTEM)
+  content : text
+  reply_to_message_id : char(36) <<FK>>
+  created_at : datetime
+  is_edited : boolean
+  edited_at : datetime
+  is_recalled : boolean
+  recalled_at : datetime
+  recalled_by : char(36) <<FK>>
+}
+
+entity attachments {
+  * id : char(36) <<PK>>
+  --
+  message_id : char(36) <<FK>>
+  file_url : varchar(700)
+  file_name : varchar(255)
+  mime_type : varchar(120)
+  file_size : bigint
+}
+
+entity message_receipts {
+  * message_id : char(36) <<PK, FK>>
+  * user_id : char(36) <<PK, FK>>
+  --
+  seen_at : datetime
+}
+
+entity message_deletions {
+  * message_id : char(36) <<PK, FK>>
+  * user_id : char(36) <<PK, FK>>
+  --
+  deleted_at : datetime
+}
+
+entity pinned_messages {
+  * message_id : char(36) <<PK, FK>>
+  --
+  conversation_id : char(36) <<FK>>
+  pinned_by : char(36) <<FK>>
+  pinned_at : datetime
+}
+
+' ---------------------------------------------------------------------------
+' Layout grid.
+' ---------------------------------------------------------------------------
+' Top row: social/auth tables around users.
+invalidated_tokens -[hidden]right- friendships
+friendships -[hidden]right- users
+users -[hidden]right- blocks
+
+' Middle row: main chat flow.
+conversation_members -[hidden]right- conversations
+conversations -[hidden]right- messages
+messages -[hidden]right- attachments
+
+' Bottom row: per-user/per-message state tables.
+conversation_deletions -[hidden]right- message_receipts
+message_receipts -[hidden]right- message_deletions
+message_deletions -[hidden]right- pinned_messages
+
+' Vertical anchors.
+users -[hidden]down- conversation_members
+conversations -[hidden]down- conversation_deletions
+messages -[hidden]down- message_receipts
+attachments -[hidden]down- pinned_messages
+
+' ---------------------------------------------------------------------------
+' Relationships.
+' Kept short and mostly unlabeled so PlantUML routes lines more cleanly.
+' FK names are already visible in table fields.
+' ---------------------------------------------------------------------------
+
+' Social / user.
+users ||--o{ friendships
+users ||--o{ blocks
+
+' Conversation area.
+users ||--o{ conversations
+users ||--o{ conversation_members
+conversations ||--o{ conversation_members
+users ||--o{ conversation_deletions
+conversations ||--o{ conversation_deletions
+
+' Message area.
+conversations ||--o{ messages
+users ||--o{ messages
+messages ||--o{ messages : reply
+messages ||--o{ attachments
+messages ||--o{ message_receipts
+users ||--o{ message_receipts
+messages ||--o{ message_deletions
+users ||--o{ message_deletions
+messages ||--o| pinned_messages
+conversations ||--o{ pinned_messages
+users ||--o{ pinned_messages
+
+@enduml

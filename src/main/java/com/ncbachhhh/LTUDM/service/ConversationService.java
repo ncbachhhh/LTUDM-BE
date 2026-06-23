@@ -5,6 +5,7 @@ import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
 import com.ncbachhhh.LTUDM.dto.request.MuteConversationRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationEmojiRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
+import com.ncbachhhh.LTUDM.dto.request.UpdateConversationTitleRequest;
 import com.ncbachhhh.LTUDM.dto.response.AttachmentResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoStatResponse;
@@ -308,6 +309,24 @@ public class ConversationService {
         ConversationResponse response = toConversationResponse(conversationRepository.save(conversation));
         publishConversationUpsert(conversationId, currentUserId, null, getConversationMemberIds(conversationId));
         return enrichConversationPreview(applyDirectFriendshipState(response, currentUserId), currentUserId);
+    }
+
+    @Transactional
+    public ConversationResponse updateConversationTitle(String conversationId, UpdateConversationTitleRequest request) {
+        String currentUserId = getCurrentUserId();
+        Conversation conversation = getConversation(conversationId);
+        ensureGroupConversation(conversation);
+        ensureCanManageGroup(conversationId, currentUserId);
+
+        String title = request.getTitle() == null ? null : request.getTitle().trim();
+        if (!hasText(title)) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
+
+        conversation.setTitle(title);
+        ConversationResponse response = toConversationResponse(conversationRepository.save(conversation));
+        publishConversationUpsert(conversationId, currentUserId, null, getConversationMemberIds(conversationId));
+        return enrichConversationPreview(response, currentUserId);
     }
 
     @Transactional

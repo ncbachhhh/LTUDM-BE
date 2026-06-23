@@ -214,24 +214,6 @@ public class UserService {
     public UserResponse updateMySettings(UserSettingsUpdateRequest request) {
         User user = getCurrentUser();
 
-        if (request.getShowBirthday() != null) {
-            user.setShowBirthday(request.getShowBirthday());
-        }
-        if (request.getOnlineStatus() != null) {
-            user.setOnlineStatus(request.getOnlineStatus());
-        }
-        if (request.getShowEmail() != null) {
-            user.setShowEmail(request.getShowEmail());
-        }
-        if (request.getMentionSuggestions() != null) {
-            user.setMentionSuggestions(request.getMentionSuggestions());
-        }
-        if (request.getReadReceipts() != null) {
-            user.setReadReceipts(request.getReadReceipts());
-        }
-        if (request.getNotificationEnabled() != null) {
-            user.setNotificationEnabled(request.getNotificationEnabled());
-        }
         if (request.getSoundEnabled() != null) {
             user.setSoundEnabled(request.getSoundEnabled());
         }

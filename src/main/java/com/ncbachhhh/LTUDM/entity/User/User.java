@@ -67,24 +67,6 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
-    @Column(name = "show_birthday", nullable = false, length = 10)
-    private String showBirthday = "full";
-
-    @Column(name = "online_status", nullable = false)
-    private boolean onlineStatus = true;
-
-    @Column(name = "show_email", nullable = false)
-    private boolean showEmail = true;
-
-    @Column(name = "mention_suggestions", nullable = false)
-    private boolean mentionSuggestions = true;
-
-    @Column(name = "read_receipts", nullable = false)
-    private boolean readReceipts = true;
-
-    @Column(name = "notification_enabled", nullable = false)
-    private boolean notificationEnabled = true;
-
     @Column(name = "sound_enabled", nullable = false)
     private boolean soundEnabled = true;
 

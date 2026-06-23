@@ -5,6 +5,7 @@ import com.ncbachhhh.LTUDM.dto.request.CreateConversationRequest;
 import com.ncbachhhh.LTUDM.dto.request.MuteConversationRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationEmojiRequest;
 import com.ncbachhhh.LTUDM.dto.request.UpdateConversationNicknameRequest;
+import com.ncbachhhh.LTUDM.dto.request.UpdateConversationTitleRequest;
 import com.ncbachhhh.LTUDM.dto.response.ApiResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationInfoResponse;
 import com.ncbachhhh.LTUDM.dto.response.ConversationResponse;
@@ -70,6 +71,13 @@ public class ConversationController {
             @PathVariable String conversationId,
             @RequestBody @Valid UpdateConversationEmojiRequest request) {
         return ApiResponse.success(conversationService.updateConversationEmoji(conversationId, request));
+    }
+
+    @PatchMapping("/{conversationId}/title")
+    ApiResponse<ConversationResponse> updateConversationTitle(
+            @PathVariable String conversationId,
+            @RequestBody @Valid UpdateConversationTitleRequest request) {
+        return ApiResponse.success(conversationService.updateConversationTitle(conversationId, request));
     }
 
     @PatchMapping("/{conversationId}/mute")

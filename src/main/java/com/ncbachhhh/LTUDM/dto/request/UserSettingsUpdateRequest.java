@@ -15,15 +15,6 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class UserSettingsUpdateRequest {
-    @Pattern(regexp = "^(full|hide)$", message = "INVALID_SHOW_BIRTHDAY")
-    String showBirthday;
-
-    Boolean onlineStatus;
-    Boolean showEmail;
-    Boolean mentionSuggestions;
-    Boolean readReceipts;
-    Boolean notificationEnabled;
-
     @JsonProperty("sound_enabled")
     Boolean soundEnabled;
 

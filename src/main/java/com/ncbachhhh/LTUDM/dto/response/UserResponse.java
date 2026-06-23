@@ -44,13 +44,6 @@ public class UserResponse {
     @JsonProperty("is_active")
     boolean active;
 
-    String showBirthday;
-    boolean onlineStatus;
-    boolean showEmail;
-    boolean mentionSuggestions;
-    boolean readReceipts;
-    boolean notificationEnabled;
-
     @JsonProperty("sound_enabled")
     boolean soundEnabled;
 

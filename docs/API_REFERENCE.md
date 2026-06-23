@@ -259,13 +259,8 @@ Request:
 
 ```json
 {
-  "showBirthday": "full",
-  "onlineStatus": true,
-  "showEmail": true,
-  "mentionSuggestions": true,
-  "readReceipts": true,
-  "notificationEnabled": true,
-  "soundEnabled": true,
+  "sound_enabled": true,
+  "notification_sound": "default",
   "theme_mode": "dark",
   "chat_color": "linear-gradient(135deg, rgb(255, 0, 204) 0%, rgb(51, 51, 153) 100%)"
 }
@@ -275,16 +270,20 @@ Behavior:
 
 - Current user duoc lay tu access token.
 - Tat ca fields deu optional; field null se khong update.
+- `sound_enabled` bat/tat am thanh thong bao phia client.
+- `notification_sound` chi nhan `default`, `sound2`, `sound3`, `sound4`, `sound5`, `sound6`, `sound7`, hoac `sound8`.
 - `theme_mode` chi nhan `light` hoac `dark`.
 - `chat_color` la CSS background value cho bubble/chat color, vi du `#0A84FF`, `rgb(0, 51, 255)`, hoac `linear-gradient(...)`.
 - `chat_color` toi da 500 ky tu va backend chan `url(...)`, `;`, `{}`, `<`, `>` de tranh CSS injection co ban.
-- `theme_mode` va `chat_color` luu tren bang `users`, ap dung cho toan bo UI/chat cua current user.
+- `sound_enabled`, `notification_sound`, `theme_mode` va `chat_color` luu tren bang `users`, ap dung cho toan bo UI/chat cua current user.
 - Thiet lap nay chi anh huong cach current user nhin thay giao dien, khong thay doi conversation cho user khac.
 
 Response `data`: `UserResponse`, bao gom:
 
 ```json
 {
+  "sound_enabled": true,
+  "notification_sound": "default",
   "theme_mode": "dark",
   "chat_color": "linear-gradient(135deg, rgb(255, 0, 204) 0%, rgb(51, 51, 153) 100%)"
 }
