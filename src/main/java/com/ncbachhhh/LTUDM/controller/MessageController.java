@@ -42,16 +42,19 @@ public class MessageController {
     ConversationService conversationService;
     SimpMessagingTemplate messagingTemplate;
 
+    // Gửi message qua REST multipart; dùng cho text kèm file, image và attachment.
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<MessageResponse> sendMessageWithFile(
             @RequestPart("message") MessageRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file) {
         MessageResponse savedMessage = messageService.sendMessage(request, file);
+        // Sau khi DB/R2 đã cập nhật thành công, broadcast message và preview realtime.
         messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), savedMessage);
         sendConversationPreviewToMembers(request.getConversationId());
         return ApiResponse.success(savedMessage);
     }
 
+    // Lấy message theo trang, chỉ trả các message còn visible với current user.
     @GetMapping("/conversation/{conversationId}/paged")
     ApiResponse<Page<MessageResponse>> getMessagesPaged(
             @PathVariable String conversationId,
@@ -60,6 +63,7 @@ public class MessageController {
         return ApiResponse.success(messageService.getMessagesByConversationPaged(conversationId, page, size));
     }
 
+    // Tìm message trong conversation theo keyword.
     @GetMapping("/conversation/{conversationId}/search")
     ApiResponse<Page<MessageResponse>> searchMessages(
             @PathVariable String conversationId,
@@ -69,12 +73,14 @@ public class MessageController {
         return ApiResponse.success(messageService.searchMessages(conversationId, keyword, page, size));
     }
 
+    // Đánh dấu một message là đã đọc cho current user.
     @PutMapping("/{messageId}/read")
     ApiResponse<String> markAsRead(@PathVariable String messageId) {
         messageService.markAsRead(messageId);
         return ApiResponse.success("Message marked as read.");
     }
 
+    // Đánh dấu tất cả visible message trong conversation là đã đọc.
     @PutMapping("/conversation/{conversationId}/read-all")
     ApiResponse<String> markAllAsRead(@PathVariable String conversationId) {
         List<MessageReceipt> receipts = messageService.markAllAsRead(conversationId);
@@ -83,12 +89,14 @@ public class MessageController {
         return ApiResponse.success("All visible messages marked as read.");
     }
 
+    // Soft delete message riêng với current user.
     @DeleteMapping("/{messageId}")
     ApiResponse<String> deleteMessage(@PathVariable String messageId) {
         messageService.deleteMessage(messageId);
         return ApiResponse.success("Message deleted.");
     }
 
+    // Thu hồi message nếu current user là sender.
     @PutMapping("/{messageId}/recall")
     ApiResponse<MessageResponse> recallMessage(@PathVariable String messageId) {
         MessageResponse recalledMessage = messageService.recallMessage(messageId);
@@ -97,16 +105,19 @@ public class MessageController {
         return ApiResponse.success(recalledMessage);
     }
 
+    // Đếm số message chưa đọc trong conversation.
     @GetMapping("/conversation/{conversationId}/unread-count")
     ApiResponse<Long> countUnread(@PathVariable String conversationId) {
         return ApiResponse.success(messageService.countUnreadMessages(conversationId));
     }
 
+    // Lấy message mới nhất mà current user còn nhìn thấy.
     @GetMapping("/conversation/{conversationId}/latest")
     ApiResponse<MessageResponse> getLatestMessage(@PathVariable String conversationId) {
         return ApiResponse.success(messageService.getLatestMessage(conversationId));
     }
 
+    // Pin message trong conversation, giới hạn số lượng pin nằm ở service.
     @PutMapping("/{messageId}/pin")
     ApiResponse<MessageResponse> pinMessage(@PathVariable String messageId) {
         MessageResponse pinnedMessage = messageService.pinMessage(messageId);
@@ -114,6 +125,7 @@ public class MessageController {
         return ApiResponse.success(pinnedMessage);
     }
 
+    // Gỡ pin message trong conversation.
     @DeleteMapping("/{messageId}/pin")
     ApiResponse<MessageResponse> unpinMessage(@PathVariable String messageId) {
         MessageResponse unpinnedMessage = messageService.unpinMessage(messageId);
@@ -121,11 +133,13 @@ public class MessageController {
         return ApiResponse.success(unpinnedMessage);
     }
 
+    // Lấy danh sách message đang được pin.
     @GetMapping("/conversation/{conversationId}/pinned")
     ApiResponse<List<MessageResponse>> getPinnedMessages(@PathVariable String conversationId) {
         return ApiResponse.success(messageService.getPinnedMessages(conversationId));
     }
 
+    // Lấy ảnh trong kho media của conversation.
     @GetMapping("/conversation/{conversationId}/media/images")
     ApiResponse<Page<MessageResponse>> getConversationImages(
             @PathVariable String conversationId,
@@ -134,6 +148,7 @@ public class MessageController {
         return ApiResponse.success(messageService.getConversationImages(conversationId, page, size));
     }
 
+    // Lấy một số ảnh gần nhất để hiện preview trong info panel.
     @GetMapping("/conversation/{conversationId}/media/images/preview")
     ApiResponse<List<MessageResponse>> getConversationImagePreview(
             @PathVariable String conversationId,
@@ -141,6 +156,7 @@ public class MessageController {
         return ApiResponse.success(messageService.getConversationImagePreview(conversationId, limit));
     }
 
+    // Lấy file attachment trong conversation.
     @GetMapping("/conversation/{conversationId}/media/files")
     ApiResponse<Page<MessageResponse>> getConversationFiles(
             @PathVariable String conversationId,
@@ -149,6 +165,7 @@ public class MessageController {
         return ApiResponse.success(messageService.getConversationFiles(conversationId, page, size));
     }
 
+    // Lấy các link được phát hiện trong nội dung message.
     @GetMapping("/conversation/{conversationId}/media/links")
     ApiResponse<Page<ConversationLinkResponse>> getConversationLinks(
             @PathVariable String conversationId,
@@ -157,16 +174,19 @@ public class MessageController {
         return ApiResponse.success(messageService.getConversationLinks(conversationId, page, size));
     }
 
+    // Gửi conversation preview mới cho tất cả member sau khi message làm thay đổi latest/unread.
     private void sendConversationPreviewToMembers(String conversationId) {
         conversationService.getConversationMemberIds(conversationId)
                 .forEach(memberId -> sendConversationPreviewToUser(conversationId, memberId));
     }
 
+    // Gửi preview riêng cho một user qua user queue của STOMP.
     private void sendConversationPreviewToUser(String conversationId, String userId) {
         ConversationResponse preview = conversationService.getConversationPreviewForUser(conversationId, userId);
         messagingTemplate.convertAndSendToUser(userId, "/queue/conversations", preview);
     }
 
+    // Broadcast event read receipt để các client cập nhật trạng thái seen/read realtime.
     private void publishReadEvent(String conversationId, List<MessageReceipt> receipts) {
         if (receipts == null || receipts.isEmpty()) {
             return;
@@ -184,6 +204,7 @@ public class MessageController {
         messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", event);
     }
 
+    // Lấy user id đang đăng nhập từ SecurityContext cho các handler REST nội bộ.
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !StringUtils.hasText(authentication.getName())) {

@@ -42,6 +42,7 @@ public class UserService {
     R2StorageService r2StorageService;
     RelationshipService relationshipService;
 
+    // Tạo user mới: normalize email/username, hash password và set role mặc định.
     public UserResponse createUser(UserRegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
         String username = resolveRegistrationUsername(request.getUsername(), email);
@@ -66,6 +67,7 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Nếu request không có username, tạo username an toàn từ phần trước @ của email.
     private String resolveRegistrationUsername(String requestedUsername, String email) {
         if (StringUtils.hasText(requestedUsername)) {
             return requestedUsername.trim();
@@ -86,6 +88,7 @@ public class UserService {
 
         String username = baseUsername;
         int suffix = 1;
+        // Nếu username đã tồn tại, thêm suffix những vẫn giu giới hạn do dài.
         while (userRepository.existsByUsernameIgnoreCase(username)) {
             String suffixText = "_" + suffix++;
             int baseLength = Math.min(baseUsername.length(), GENERATED_USERNAME_MAX_LENGTH - suffixText.length());
@@ -95,10 +98,12 @@ public class UserService {
         return username;
     }
 
+    // Lấy thông tin user đang đăng nhập.
     public UserResponse getMyInfo() {
         return userMapper.toUserResponse(getCurrentUser());
     }
 
+    // Đổi mật khẩu sau khi validate mật khẩu cũ, confirm password và trung mật khẩu mới.
     public void changePassword(ChangePasswordRequest request) {
         User user = getCurrentUser();
 
@@ -117,6 +122,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Tìm user bằng email và trả kèm relationship/presence với current user.
     public UserProfileResponse searchUserByEmail(String email) {
         String currentUserId = getCurrentUserId();
         String normalizedEmail = normalizeEmail(email);
@@ -130,6 +136,7 @@ public class UserService {
         return toUserProfileResponse(user, currentUserId);
     }
 
+    // Tìm user khác để gửi lời mời kết bạn, giới hạn số kết quả ở repository call.
     public List<UserProfileResponse> searchUsersForFriendRequest(String keyword) {
         String currentUserId = getCurrentUserId();
         String normalizedKeyword = normalizeSearchKeyword(keyword);
@@ -143,6 +150,7 @@ public class UserService {
                 .toList();
     }
 
+    // Lấy profile user khác, không cho lấy chính mình qua endpoint profile người khác.
     public UserProfileResponse getUserProfile(String userId) {
         String currentUserId = getCurrentUserId();
         if (!StringUtils.hasText(userId) || currentUserId.equals(userId)) {
@@ -158,6 +166,7 @@ public class UserService {
         return toUserProfileResponse(user, currentUserId);
     }
 
+    // Cập nhật user theo id, thường được bao về boi @PreAuthorize ở controller.
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -166,6 +175,7 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Upload avatar lên R2 và lưu URL mới vào user.
     public UserResponse updateMyAvatar(MultipartFile file) {
         User user = getCurrentUser();
 
@@ -173,16 +183,19 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Wrapper trả về riêng URL avatar cho endpoint profile avatar.
     public String updateMyProfileAvatar(MultipartFile file) {
         return updateMyAvatar(file).getAvatarUrl();
     }
 
+    // Upload background lên R2 và trả về URL background mới.
     public String updateMyProfileBackground(MultipartFile file) {
         User user = getCurrentUser();
         user.setBackgroundUrl(r2StorageService.uploadBackground(user.getId(), file));
         return userMapper.toUserResponse(userRepository.save(user)).getBackgroundUrl();
     }
 
+    // Cập nhật các field profile nếu request có gửi field đó lên.
     public UserResponse updateMyProfile(UserProfileUpdateRequest request) {
         User user = getCurrentUser();
 
@@ -211,6 +224,7 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Cập nhật setting cả nhan, normalize các gia tri string để FE/BE dùng chung format.
     public UserResponse updateMySettings(UserSettingsUpdateRequest request) {
         User user = getCurrentUser();
 
@@ -230,11 +244,13 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Xóa tài khoản hiện tại khỏi database theở repository delete.
     @Transactional
     public void deleteMyAccount() {
         userRepository.delete(getCurrentUser());
     }
 
+    // Admin/helper vô hiệu hóa user bằng active=false.
     public void banUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -242,6 +258,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Admin/helper mở khóa user bằng active=true.
     public void unbanUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -249,6 +266,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Lấy user id từ SecurityContext; service mặc định chạy trong request đã authenticated.
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -257,11 +275,13 @@ public class UserService {
         return authentication.getName();
     }
 
+    // Load entity user hiện tại để các ham update dùng chung.
     private User getCurrentUser() {
         return userRepository.findById(getCurrentUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
+    // Normalize email search và reject query rỗng.
     private String normalizeEmail(String email) {
         if (!StringUtils.hasText(email)) {
             throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
@@ -269,6 +289,7 @@ public class UserService {
         return email.trim().toLowerCase();
     }
 
+    // Normalize keyword search và bắt buộc tối thiểu 2 ký tự.
     private String normalizeSearchKeyword(String keyword) {
         if (!StringUtils.hasText(keyword) || keyword.trim().length() < 2) {
             throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
@@ -276,6 +297,7 @@ public class UserService {
         return keyword.trim();
     }
 
+    // Map user sang profile response, có bổ sung relationship state và online state.
     private UserProfileResponse toUserProfileResponse(User user, String currentUserId) {
         RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, user.getId());
 

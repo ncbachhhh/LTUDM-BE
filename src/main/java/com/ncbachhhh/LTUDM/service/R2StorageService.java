@@ -65,6 +65,7 @@ public class R2StorageService {
     S3Client s3Client;
     R2Properties r2Properties;
 
+    // Upload avatar user vào folder riêng và giới hạn dung lượng/kiểu file ảnh.
     public String uploadAvatar(String userId, MultipartFile file) {
         return uploadFile(
                 "avatars/%s".formatted(userId),
@@ -78,6 +79,7 @@ public class R2StorageService {
         );
     }
 
+    // Upload ảnh nền user, dùng chung rule kich thuoc với avatar.
     public String uploadBackground(String userId, MultipartFile file) {
         return uploadFile(
                 "backgrounds/%s".formatted(userId),
@@ -91,6 +93,7 @@ public class R2StorageService {
         );
     }
 
+    // Upload avatar group conversation vào folder theo conversation id.
     public String uploadConversationAvatar(String conversationId, MultipartFile file) {
         return uploadFile(
                 "conversations/%s/avatar".formatted(conversationId),
@@ -104,6 +107,7 @@ public class R2StorageService {
         );
     }
 
+    // Upload ảnh trong message và trả về public URL để lưu vào Message.content.
     public String uploadMessageImage(String conversationId, String senderId, MultipartFile file) {
         return uploadFile(
                 "messages/%s/%s".formatted(conversationId, senderId),
@@ -117,6 +121,7 @@ public class R2StorageService {
         );
     }
 
+    // Upload file attachment trong message, cho phép các content type ngoài image.
     public String uploadMessageFile(String conversationId, String senderId, MultipartFile file) {
         return uploadFile(
                 "messages/%s/%s/files".formatted(conversationId, senderId),
@@ -130,6 +135,7 @@ public class R2StorageService {
         );
     }
 
+    // Ham upload tong quat: validate file, tạo object key, day lên R2/S3 và build public URL.
     public String uploadFile(
             String folder,
             MultipartFile file,
@@ -142,12 +148,14 @@ public class R2StorageService {
     ) {
         validateFile(file, allowedContentTypes, maxFileSizeBytes, fileRequiredError, invalidFileTypeError, fileTooLargeError);
 
+        // Content type quyết định extension; không tin vào tên file client gửi lên.
         String contentType = file.getContentType();
         String extension = resolveExtension(contentType, invalidFileTypeError);
         String normalizedFolder = normalizeFolder(folder);
         String objectKey = normalizedFolder + "/" + UUID.randomUUID() + "." + extension;
 
         try {
+            // R2 tương thích S3 API, nen upload bằng PutObjectRequest của AWS SDK.
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(r2Properties.bucket())
                     .key(objectKey)
@@ -162,6 +170,7 @@ public class R2StorageService {
         }
     }
 
+    // Validate file required, content type nằm trong whitelist, và dung lượng không vượt giới hạn.
     private void validateFile(
             MultipartFile file,
             Set<String> allowedContentTypes,
@@ -184,6 +193,7 @@ public class R2StorageService {
         }
     }
 
+    // Map content type sang extension để tạo object key ổn định.
     private String resolveExtension(String contentType, ErrorCode invalidFileTypeError) {
         String extension = CONTENT_TYPE_EXTENSIONS.get(contentType);
         if (extension == null) {
@@ -192,6 +202,7 @@ public class R2StorageService {
         return extension;
     }
 
+    // Chuẩn hóa folder để tránh double slash hoặc backslash Windows trong object key.
     private String normalizeFolder(String folder) {
         if (!StringUtils.hasText(folder)) {
             throw new IllegalArgumentException("Upload folder must not be blank");
@@ -200,6 +211,7 @@ public class R2StorageService {
         return folder.replace('\\', '/').replaceAll("^/+", "").replaceAll("/+$", "");
     }
 
+    // Build URL public: ưu tiên CDN/public-base-url, fallback về endpoint/bucket của R2.
     private String buildFileUrl(String objectKey) {
         if (StringUtils.hasText(r2Properties.publicBaseUrl())) {
             return r2Properties.publicBaseUrl().replaceAll("/+$", "") + "/" + objectKey;

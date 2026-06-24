@@ -35,6 +35,7 @@ public class FriendshipService {
     PresenceService presenceService;
     RelationshipService relationshipService;
 
+    // Gửi lời mời kết bạn, reuse record DECLINED cũ nếu có để tránh tạo duplicate relationship.
     @Transactional
     public FriendshipResponse sendRequest(String addresseeId) {
         String currentUserId = getCurrentUserId();
@@ -42,6 +43,7 @@ public class FriendshipService {
 
         Friendship existing = friendshipRepository.findBetweenUsers(currentUserId, addresseeId).orElse(null);
         if (existing != null) {
+            // Lời mời đã bị decline có thể được gửi lai bằng cách đổi requester/addressee và set PENDING.
             if (existing.getStatus() == FriendshipStatus.DECLINED) {
                 existing.setRequesterId(currentUserId);
                 existing.setAddresseeId(addresseeId);
@@ -59,6 +61,7 @@ public class FriendshipService {
         return toResponse(friendshipRepository.save(friendship), currentUserId, null);
     }
 
+    // Chấp nhận request và đảm bảo hai user có direct conversation để chat với nhau.
     @Transactional
     public FriendshipResponse acceptRequest(String friendshipId) {
         String currentUserId = getCurrentUserId();
@@ -74,6 +77,7 @@ public class FriendshipService {
         return toResponse(savedFriendship, currentUserId, conversation);
     }
 
+    // Tu chồi request đang pending mà current user là người nhận.
     @Transactional
     public FriendshipResponse declineRequest(String friendshipId) {
         String currentUserId = getCurrentUserId();
@@ -84,6 +88,7 @@ public class FriendshipService {
         return toResponse(friendshipRepository.save(friendship), currentUserId, null);
     }
 
+    // Thu hồi request pending do current user đã gửi.
     @Transactional
     public void withdrawRequest(String friendshipId) {
         String currentUserId = getCurrentUserId();
@@ -99,6 +104,7 @@ public class FriendshipService {
         friendshipRepository.delete(friendship);
     }
 
+    // Xóa bạn bè hoặc legacy blocked friendship nếu current user có quyền.
     @Transactional
     public void deleteFriend(String friendshipId) {
         String currentUserId = getCurrentUserId();
@@ -117,6 +123,7 @@ public class FriendshipService {
         friendshipRepository.delete(friendship);
     }
 
+    // Chặn user bằng bảng blocks mới; relationship resolver sẽ ưu tiên bằng nay.
     @Transactional
     public FriendshipResponse blockUser(String userId) {
         String currentUserId = getCurrentUserId();
@@ -130,6 +137,7 @@ public class FriendshipService {
         }
 
         Friendship friendship = friendshipRepository.findBetweenUsers(currentUserId, userId).orElse(null);
+        // Nếu dữ liệu cũ có friendship BLOCKED, restore thành ACCEPTED để trạng thái block chỉ do bảng blocks quyết định.
         if (friendship != null && friendship.getStatus() == FriendshipStatus.BLOCKED
                 && friendship.getRequesterId().equals(currentUserId)) {
             friendship.setStatus(FriendshipStatus.ACCEPTED);
@@ -139,6 +147,7 @@ public class FriendshipService {
         return toBlockedResponse(currentUserId, userId, friendship);
     }
 
+    // Bỏ chặn user trong bảng blocks và xử lý legacy blocked friendship nếu còn tồn tại.
     @Transactional
     public void unblockUser(String userId) {
         String currentUserId = getCurrentUserId();
@@ -165,6 +174,7 @@ public class FriendshipService {
         }
     }
 
+    // Lấy danh sách user bị current user chặn, gồm cả records mới trong blocks và legacy friendship BLOCKED.
     public List<FriendshipResponse> getBlockedUsers() {
         String currentUserId = getCurrentUserId();
         List<FriendshipResponse> blockedByBlockTable = blockRepository.findByBlockerId(currentUserId).stream()
@@ -186,6 +196,7 @@ public class FriendshipService {
                 .toList();
     }
 
+    // Lấy request đang pending mà current user là addressee.
     public List<FriendshipResponse> getIncomingRequests() {
         String currentUserId = getCurrentUserId();
         return friendshipRepository.findByAddresseeId(currentUserId).stream()
@@ -194,6 +205,7 @@ public class FriendshipService {
                 .toList();
     }
 
+    // Lấy request đang pending mà current user là requester.
     public List<FriendshipResponse> getOutgoingRequests() {
         String currentUserId = getCurrentUserId();
         return friendshipRepository.findByRequesterId(currentUserId).stream()
@@ -202,6 +214,7 @@ public class FriendshipService {
                 .toList();
     }
 
+    // Lấy danh sách friendship ACCEPTED của current user.
     public List<FriendshipResponse> getFriends() {
         String currentUserId = getCurrentUserId();
         return friendshipRepository.findByUserIdAndStatus(currentUserId, FriendshipStatus.ACCEPTED).stream()
@@ -209,6 +222,7 @@ public class FriendshipService {
                 .toList();
     }
 
+    // Tìm trong danh sách bạn bè theo tên để FE hiển thị khi tạo nhom/tìm ban.
     public List<UserProfileResponse> searchMyFriendsByName(String name) {
         String currentUserId = getCurrentUserId();
         String normalizedName = normalizeName(name);
@@ -222,6 +236,7 @@ public class FriendshipService {
                 .toList();
     }
 
+    // Load friendship theo id và chuẩn hóa lỗi khi id rỗng/không tồn tại.
     private Friendship getFriendship(String friendshipId) {
         if (!StringUtils.hasText(friendshipId)) {
             throw new AppException(ErrorCode.FRIENDSHIP_NOT_FOUND);
@@ -230,6 +245,7 @@ public class FriendshipService {
                 .orElseThrow(() -> new AppException(ErrorCode.FRIENDSHIP_NOT_FOUND));
     }
 
+    // Validate user đích cho send/block: tồn tại, active và không phải chính mình.
     private void validateTargetUser(String currentUserId, String targetUserId) {
         if (!StringUtils.hasText(targetUserId)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
@@ -244,6 +260,7 @@ public class FriendshipService {
         }
     }
 
+    // Validate riêng cho unblock vì user bị block có thể không cần load full entity active như send request.
     private void validateUnblockTarget(String currentUserId, String targetUserId) {
         if (!StringUtils.hasText(targetUserId)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
@@ -253,6 +270,7 @@ public class FriendshipService {
         }
     }
 
+    // Chuẩn hóa query search bạn bè và bắt tối thiểu 2 ký tự.
     private String normalizeName(String name) {
         if (!StringUtils.hasText(name) || name.trim().length() < 2) {
             throw new AppException(ErrorCode.SEARCH_QUERY_REQUIRED);
@@ -260,6 +278,7 @@ public class FriendshipService {
         return name.trim();
     }
 
+    // Đảm bảo current user là người nhận của request pending.
     private void ensureReceivedPendingRequest(Friendship friendship, String currentUserId) {
         if (!friendship.getAddresseeId().equals(currentUserId)) {
             throw new AppException(ErrorCode.FRIENDSHIP_REQUEST_NOT_RECEIVED);
@@ -269,6 +288,7 @@ public class FriendshipService {
         }
     }
 
+    // Đảm bảo current user là một trong hai đầu của friendship.
     private void ensureFriendshipParticipant(Friendship friendship, String currentUserId) {
         if (!friendship.getRequesterId().equals(currentUserId)
                 && !friendship.getAddresseeId().equals(currentUserId)) {
@@ -276,6 +296,7 @@ public class FriendshipService {
         }
     }
 
+    // Build response friendship kèm profile của người còn lại và conversation nếu có.
     private FriendshipResponse toResponse(Friendship friendship, String currentUserId, ConversationResponse conversation) {
         String otherUserId = friendship.getRequesterId().equals(currentUserId)
                 ? friendship.getAddresseeId()
@@ -295,6 +316,7 @@ public class FriendshipService {
                 .build();
     }
 
+    // Build response cho block state, vì block mới có thể không có friendship id.
     private FriendshipResponse toBlockedResponse(String currentUserId, String blockedUserId, Friendship friendship) {
         User blockedUser = userRepository.findById(blockedUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -311,6 +333,7 @@ public class FriendshipService {
                 .build();
     }
 
+    // Map user thành profile nhỏ, kèm relationship/presence để FE hiện nút hành động đúng.
     private UserProfileResponse toUserProfile(User user, String currentUserId) {
         RelationshipService.RelationshipState relationship = relationshipService.resolve(currentUserId, user.getId());
 
@@ -327,6 +350,7 @@ public class FriendshipService {
                 .build();
     }
 
+    // Lấy user id hiện tại từ SecurityContext.
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

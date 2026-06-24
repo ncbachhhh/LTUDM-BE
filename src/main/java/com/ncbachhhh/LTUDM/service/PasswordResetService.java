@@ -36,6 +36,7 @@ public class PasswordResetService {
     EmailService emailService;
     SecureRandom secureRandom = new SecureRandom();
 
+    // Khởi tạo reset password: tạo OTP, hash vào Redis, set cooldown và gửi mail nếu email tồn tại.
     public void forgotPassword(String email) {
         String normalizedEmail = normalizeEmail(email);
         userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
@@ -44,6 +45,7 @@ public class PasswordResetService {
                 return;
             }
 
+            // Redis chỉ lưu OTP đã hash và có TTL ngắn để giảm rủi ro lộ OTP.
             String otp = generateOtp();
             redisTemplate.opsForValue().set(otpKey(normalizedEmail), passwordEncoder.encode(otp), OTP_TTL);
             redisTemplate.delete(attemptsKey(normalizedEmail));
@@ -53,6 +55,7 @@ public class PasswordResetService {
         });
     }
 
+    // Verify OTP reset password và cấp reset token tạm thời nếu OTP đúng.
     public ResetOtpVerificationResponse verifyResetOtp(String email, String otp) {
         String normalizedEmail = normalizeEmail(email);
         if (userRepository.findByEmail(normalizedEmail).isEmpty()) {
@@ -65,6 +68,7 @@ public class PasswordResetService {
             throw new AppException(ErrorCode.INVALID_RESET_OTP);
         }
 
+        // Đếm số lần sai trong cùng TTL với OTP; qua giới hạn thì xóa OTP hiện tại.
         String attemptsKey = attemptsKey(normalizedEmail);
         int attempts = parseAttempts(redisTemplate.opsForValue().get(attemptsKey));
         if (attempts >= MAX_ATTEMPTS) {
@@ -81,6 +85,7 @@ public class PasswordResetService {
             throw new AppException(ErrorCode.INVALID_RESET_OTP);
         }
 
+        // Reset token được trả về client một lần, backend chỉ lưu hash của token trong Redis.
         String resetToken = generateResetToken();
         redisTemplate.opsForValue().set(resetTokenKey(resetToken), normalizedEmail, RESET_TOKEN_TTL);
         redisTemplate.delete(otpKey);
@@ -91,6 +96,7 @@ public class PasswordResetService {
                 .build();
     }
 
+    // Đổi mật khẩu bằng reset token và xóa toàn bộ Redis key của luong reset password.
     @Transactional
     public void resetPassword(String resetToken, String newPassword) {
         String tokenKey = resetTokenKey(resetToken);
@@ -111,20 +117,24 @@ public class PasswordResetService {
         redisTemplate.delete(cooldownKey(email));
     }
 
+    // Tạo OTP 6 chu số bằng SecureRandom.
     private String generateOtp() {
         return String.format("%06d", secureRandom.nextInt(1_000_000));
     }
 
+    // Tạo reset token random URL-safe, dùng làm proof sau khi verify OTP.
     private String generateResetToken() {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
+    // Normalize email để Redis key và query database không bị lệch hoa/thường.
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
+    // Parse attempts từ Redis; dữ liệu hỏng thì fallback 0 để không làm crash flow.
     private int parseAttempts(String value) {
         if (value == null) {
             return 0;
@@ -136,27 +146,33 @@ public class PasswordResetService {
         }
     }
 
+    // Khóa OTP hiện tại bằng cách xóa OTP và attempts, buoc user xin OTP mới.
     private void lockCurrentOtp(String email) {
         redisTemplate.delete(otpKey(email));
         redisTemplate.delete(attemptsKey(email));
     }
 
+    // Key lưu hash OTP reset password theo email.
     private String otpKey(String email) {
         return "forgot:otp:" + email;
     }
 
+    // Key cooldown ngắn để hạn chế spam email OTP.
     private String cooldownKey(String email) {
         return "forgot:cooldown:" + email;
     }
 
+    // Key đếm số lần verify OTP sai.
     private String attemptsKey(String email) {
         return "forgot:attempts:" + email;
     }
 
+    // Key lưu reset token đã hash, tránh lưu raw reset token trong Redis.
     private String resetTokenKey(String resetToken) {
         return "forgot:reset-token:" + sha256(resetToken);
     }
 
+    // Hash reset token để token raw chỉ nằm ở client trong thời gian ngắn.
     @SneakyThrows
     private String sha256(String value) {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");

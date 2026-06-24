@@ -20,11 +20,13 @@ public class RelationshipService {
     private final FriendshipRepository friendshipRepository;
     private final BlockRepository blockRepository;
 
+    // Resolve trạng thái quan hệ giữa current user và user khác, ưu tiên bảng blocks trước friendship.
     public RelationshipState resolve(String currentUserId, String otherUserId) {
         if (!StringUtils.hasText(currentUserId) || !StringUtils.hasText(otherUserId)) {
             return RelationshipState.none();
         }
 
+        // Block mới nằm trong bảng blocks được ưu tiên cao nhất vì nó ảnh hưởng trực tiếp đến chat/profile.
         boolean blockedByCurrentUser = blockRepository.existsByBlockerIdAndBlockedId(currentUserId, otherUserId);
         boolean currentUserBlocked = blockRepository.existsByBlockerIdAndBlockedId(otherUserId, currentUserId);
         if (blockedByCurrentUser || currentUserBlocked) {
@@ -41,6 +43,7 @@ public class RelationshipService {
             return RelationshipState.none();
         }
 
+        // Direction cho FE biet request/block là current user tạo ra hay nhận vào.
         String direction = switch (friendship.getStatus()) {
             case PENDING -> friendship.getRequesterId().equals(currentUserId) ? OUTGOING : INCOMING;
             case BLOCKED -> friendship.getRequesterId().equals(currentUserId) ? OUTGOING : INCOMING;
@@ -58,6 +61,7 @@ public class RelationshipService {
         );
     }
 
+    // Guard dùng ở conversation/message để đảm bảo hai user đang là bạn bè accepted.
     public void ensureAcceptedFriendship(String currentUserId, String otherUserId) {
         RelationshipState relationship = resolve(currentUserId, otherUserId);
         if (!FriendshipStatus.ACCEPTED.name().equals(relationship.status())) {
@@ -65,6 +69,7 @@ public class RelationshipService {
         }
     }
 
+    // Tìm relationship cũ, ưu tiên legacy BLOCKED nếu dữ liệu cũ vẫn còn trong friendships.
     private Friendship findRelationship(String currentUserId, String otherUserId) {
         return friendshipRepository.findAllBetweenUsers(currentUserId, otherUserId).stream()
                 .filter(friendship -> friendship.getStatus() == FriendshipStatus.BLOCKED)
@@ -79,6 +84,7 @@ public class RelationshipService {
             boolean blockedByCurrentUser,
             boolean currentUserBlocked
     ) {
+        // Trạng thái mặc định khi không có block/friendship giữa hai user.
         private static RelationshipState none() {
             return new RelationshipState(NONE, NONE, false, false);
         }

@@ -58,6 +58,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     @Value(JWT_SECRET_PROPERTY)
     private String secretKey;
 
+    // Intercept mỗi frame inbound: CONNECT để xác thực, SEND/SUBSCRIBE để kiểm tra quyền conversation.
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
@@ -77,6 +78,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return message;
     }
 
+    // Xác thực STOMP CONNECT bằng Bearer token và gán Principal là userId cho session.
     private void authenticateConnection(StompHeaderAccessor accessor) {
         try {
             SignedJWT signedJwt = parseAndValidateToken(extractBearerToken(accessor));
@@ -95,6 +97,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         }
     }
 
+    // Lấy raw JWT từ native header Authorization của STOMP CONNECT.
     private String extractBearerToken(StompHeaderAccessor accessor) {
         String authHeader = accessor.getFirstNativeHeader(AUTHORIZATION_HEADER);
         if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
@@ -105,6 +108,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return authHeader.substring(BEARER_PREFIX.length());
     }
 
+    // Verify JWT signature, expiration và revoke status trước khi cho socket kết nối.
     private SignedJWT parseAndValidateToken(String token) throws Exception {
         SignedJWT signedJwt = SignedJWT.parse(token);
         JWSVerifier verifier = new MACVerifier(secretKey.getBytes());
@@ -128,10 +132,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return signedJwt;
     }
 
+    // Chỉ SEND và SUBSCRIBE mới cần authorize theo destination; CONNECT đã xử lý riêng.
     private boolean requiresDestinationAuthorization(StompCommand command) {
         return StompCommand.SUBSCRIBE.equals(command) || StompCommand.SEND.equals(command);
     }
 
+    // Tạo Authentication nhẹ để Spring/STOMP biet principal name là userId.
     private UsernamePasswordAuthenticationToken createAuthentication(String userId, String scope) {
         List<SimpleGrantedAuthority> authorities = StringUtils.hasText(scope)
                 ? List.of(new SimpleGrantedAuthority(scope))
@@ -140,6 +146,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return new UsernamePasswordAuthenticationToken(userId, null, authorities);
     }
 
+    // Kiểm tra user chỉ được SEND/SUBSCRIBE vào conversation mình là member.
     private void authorizeDestinationAccess(StompHeaderAccessor accessor) {
         String conversationId = extractConversationId(accessor.getDestination());
         if (conversationId == null) {
@@ -152,10 +159,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         }
 
         if (StompCommand.SEND.equals(accessor.getCommand())) {
+            // SEND vào direct chat còn cần quan hệ bạn bè và không bị block.
             ensureDirectConversationIsBetweenFriends(conversationId, userId);
         }
     }
 
+    // Rút conversationId từ các destination chat/read/typing hoặc topic conversation.
     private String extractConversationId(String destination) {
         if (!StringUtils.hasText(destination)) {
             return null;
@@ -165,6 +174,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return matcher.matches() ? matcher.group(1) : null;
     }
 
+    // Lấy user id đã được gán vào Principal khi CONNECT thành công.
     private String getAuthenticatedUserId(StompHeaderAccessor accessor) {
         if (accessor.getUser() == null || !StringUtils.hasText(accessor.getUser().getName())) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
@@ -173,6 +183,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return accessor.getUser().getName();
     }
 
+    // Direct conversation chỉ cho gửi khi hai user vẫn là bạn và không có block hai chiều.
     private void ensureDirectConversationIsBetweenFriends(String conversationId, String userId) {
         var conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));

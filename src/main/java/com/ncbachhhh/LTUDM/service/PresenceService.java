@@ -20,11 +20,13 @@ public class PresenceService {
     ConcurrentHashMap<String, String> sessionUsers = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, Set<String>> userSessions = new ConcurrentHashMap<>();
 
+    // Ghi nhan một WebSocket session đang online cho user; user chỉ publish online khi từ 0 len 1 session.
     public void markOnline(String sessionId, String userId) {
         if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(userId)) {
             return;
         }
 
+        // Nếu một session id bị gán sang user khác, gỡ khỏi user cũ trước khi them user mới.
         String previousUserId = sessionUsers.put(sessionId, userId);
         if (previousUserId != null && !previousUserId.equals(userId)) {
             removeSession(previousUserId, sessionId);
@@ -39,6 +41,7 @@ public class PresenceService {
         }
     }
 
+    // Go session khi WebSocket disconnect; chỉ publish offline khi user không còn session nào.
     public void markOffline(String sessionId) {
         if (!StringUtils.hasText(sessionId)) {
             return;
@@ -55,11 +58,13 @@ public class PresenceService {
         }
     }
 
+    // Kiểm tra user có ít nhất một WebSocket session đang sống hay không.
     public boolean isOnline(String userId) {
         Set<String> sessions = userSessions.get(userId);
         return sessions != null && !sessions.isEmpty();
     }
 
+    // Xóa session khỏi user và trả về true nếu user vừa chuyển sang offline.
     private boolean removeSession(String userId, String sessionId) {
         Set<String> sessions = userSessions.get(userId);
         if (sessions == null) {
@@ -75,6 +80,7 @@ public class PresenceService {
         return true;
     }
 
+    // Broadcast presence event đến topic chung để client cập nhật online/offline realtime.
     private void publish(String userId, boolean online) {
         SimpMessagingTemplate messagingTemplate = messagingTemplateProvider.getIfAvailable();
         if (messagingTemplate == null) {

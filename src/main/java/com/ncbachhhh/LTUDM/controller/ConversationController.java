@@ -36,21 +36,25 @@ import java.util.List;
 public class ConversationController {
     ConversationService conversationService;
 
+    // Lấy danh sách conversation của current user, gồm preview/latest/unread.
     @GetMapping("/me")
     ApiResponse<List<ConversationResponse>> getMyConversations() {
         return ApiResponse.success(conversationService.getMyConversations());
     }
 
+    // Lấy thông tin chi tiết của một conversation để hiển thị info panel.
     @GetMapping("/{conversationId}/info")
     ApiResponse<ConversationInfoResponse> getConversationInfo(@PathVariable String conversationId) {
         return ApiResponse.success(conversationService.getConversationInfo(conversationId));
     }
 
+    // Tạo direct conversation hoặc group conversation tuy theo request type.
     @PostMapping
     ApiResponse<ConversationResponse> createConversation(@RequestBody @Valid CreateConversationRequest request) {
         return ApiResponse.success(conversationService.createConversation(request));
     }
 
+    // Thêm member vào group conversation, chỉ owner/người có quyền quản lý mới được thực hiện.
     @PostMapping("/{conversationId}/members")
     ApiResponse<ConversationResponse> addMembers(
             @PathVariable String conversationId,
@@ -58,6 +62,7 @@ public class ConversationController {
         return ApiResponse.success(conversationService.addMembers(conversationId, request));
     }
 
+    // Cập nhật nickname của một member trong conversation.
     @PatchMapping("/{conversationId}/members/{memberId}/nickname")
     ApiResponse<ConversationResponse> updateMemberNickname(
             @PathVariable String conversationId,
@@ -66,6 +71,7 @@ public class ConversationController {
         return ApiResponse.success(conversationService.updateMemberNickname(conversationId, memberId, request));
     }
 
+    // Cập nhật emoji mặc định của conversation.
     @PatchMapping("/{conversationId}/emoji")
     ApiResponse<ConversationResponse> updateConversationEmoji(
             @PathVariable String conversationId,
@@ -73,6 +79,7 @@ public class ConversationController {
         return ApiResponse.success(conversationService.updateConversationEmoji(conversationId, request));
     }
 
+    // Cập nhật title của group conversation.
     @PatchMapping("/{conversationId}/title")
     ApiResponse<ConversationResponse> updateConversationTitle(
             @PathVariable String conversationId,
@@ -80,6 +87,7 @@ public class ConversationController {
         return ApiResponse.success(conversationService.updateConversationTitle(conversationId, request));
     }
 
+    // Bật mute conversation cho current user với thời hạn trong request.
     @PatchMapping("/{conversationId}/mute")
     ApiResponse<ConversationResponse> muteConversation(
             @PathVariable String conversationId,
@@ -87,11 +95,13 @@ public class ConversationController {
         return ApiResponse.success(conversationService.muteConversation(conversationId, request));
     }
 
+    // Tắt mute conversation cho current user.
     @DeleteMapping("/{conversationId}/mute")
     ApiResponse<ConversationResponse> unmuteConversation(@PathVariable String conversationId) {
         return ApiResponse.success(conversationService.unmuteConversation(conversationId));
     }
 
+    // Upload/cập nhật avatar cho group conversation.
     @PostMapping(value = "/{conversationId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<ConversationResponse> updateGroupAvatar(
             @PathVariable String conversationId,
@@ -99,6 +109,7 @@ public class ConversationController {
         return ApiResponse.success(conversationService.updateGroupAvatar(conversationId, file));
     }
 
+    // PUT avatar dùng chung logic với POST để FE có thể replace idempotent về mặt API.
     @PutMapping(value = "/{conversationId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<ConversationResponse> replaceGroupAvatar(
             @PathVariable String conversationId,
@@ -106,23 +117,27 @@ public class ConversationController {
         return ApiResponse.success(conversationService.updateGroupAvatar(conversationId, file));
     }
 
+    // Xóa toàn bộ group conversation, chỉ áp dụng cho group và người có quyền quản lý.
     @DeleteMapping("/{conversationId}")
     ApiResponse<String> deleteGroupConversation(@PathVariable String conversationId) {
         conversationService.deleteGroupConversation(conversationId);
         return ApiResponse.success("Group conversation deleted.");
     }
 
+    // An/xóa conversation chỉ riêng current user bằng conversation deletion records.
     @DeleteMapping("/{conversationId}/me")
     ApiResponse<String> deleteConversationForMe(@PathVariable String conversationId) {
         conversationService.deleteConversationForCurrentUser(conversationId);
         return ApiResponse.success("Conversation deleted for current user.");
     }
 
+    // Current user rồi khỏi group conversation.
     @DeleteMapping("/{conversationId}/members/me")
     ApiResponse<ConversationResponse> leaveGroupConversation(@PathVariable String conversationId) {
         return ApiResponse.success(conversationService.leaveGroupConversation(conversationId));
     }
 
+    // Owner/manager xóa một member khỏi group conversation.
     @DeleteMapping("/{conversationId}/members/{memberId}")
     ApiResponse<ConversationResponse> removeGroupMember(
             @PathVariable String conversationId,
@@ -130,6 +145,7 @@ public class ConversationController {
         return ApiResponse.success(conversationService.removeGroupMember(conversationId, memberId));
     }
 
+    // Chuyển quyền owner của group sang member khác.
     @PatchMapping("/{conversationId}/owner/{memberId}")
     ApiResponse<ConversationResponse> transferGroupOwnership(
             @PathVariable String conversationId,

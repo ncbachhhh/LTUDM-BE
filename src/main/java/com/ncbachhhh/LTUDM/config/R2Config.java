@@ -15,6 +15,7 @@ import java.net.URI;
 @Configuration
 @EnableConfigurationProperties(R2Properties.class)
 public class R2Config {
+    // Tạo S3Client tương thích Cloudflare R2 bằng endpoint/credential trong config.
     @Bean
     S3Client s3Client(R2Properties r2Properties) {
         return S3Client.builder()
@@ -25,12 +26,14 @@ public class R2Config {
                 .build();
     }
 
+    // Đóng gói access key/secret key cho AWS SDK.
     private StaticCredentialsProvider createCredentialsProvider(R2Properties r2Properties) {
         return StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(r2Properties.accessKey(), r2Properties.secretKey())
         );
     }
 
+    // R2 cần path-style access để làm việc ổn định với S3-compatible endpoint.
     private S3Configuration createS3Configuration() {
         return S3Configuration.builder()
                 .pathStyleAccessEnabled(true)

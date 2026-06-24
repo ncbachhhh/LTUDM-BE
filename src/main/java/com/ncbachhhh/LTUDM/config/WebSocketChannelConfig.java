@@ -11,6 +11,7 @@ public class WebSocketChannelConfig implements WebSocketMessageBrokerConfigurer 
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
+    // Gán interceptor vào inbound channel để xử lý STOMP CONNECT/SEND/SUBSCRIBE trước controller.
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(webSocketAuthInterceptor);

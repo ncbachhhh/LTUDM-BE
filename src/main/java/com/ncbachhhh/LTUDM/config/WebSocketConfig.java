@@ -12,12 +12,13 @@ import java.util.List;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    private static final String DEFAULT_CORS_ALLOWED_ORIGINS =
-            "${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}";
+    private static final String DEFAULT_CORS_ALLOWED_ORIGIN_PATTERNS =
+            "${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*}";
 
-    @Value(DEFAULT_CORS_ALLOWED_ORIGINS)
-    private List<String> allowedOrigins;
+    @Value(DEFAULT_CORS_ALLOWED_ORIGIN_PATTERNS)
+    private List<String> allowedOriginPatterns;
 
+    // Khai bao broker prefix: client send vào /app, client subscribe /topic hoặc /user /queue.
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/topic", "/queue");
@@ -25,10 +26,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setUserDestinationPrefix("/user");
     }
 
+    // Đăng ký SockJS endpoint /ws và cho phép origin theo cấu hình CORS pattern.
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(allowedOrigins.toArray(String[]::new))
+                .setAllowedOriginPatterns(allowedOriginPatterns.toArray(String[]::new))
                 .withSockJS()
                 .setSessionCookieNeeded(false);
     }

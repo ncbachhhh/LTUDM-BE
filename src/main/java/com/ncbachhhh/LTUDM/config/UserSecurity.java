@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 @Component("userSecurity")
 public class UserSecurity {
+    // SpEL helper cho @PreAuthorize: chỉ cho phép user thao tác trên chính resource của mình.
     public boolean isOwner(Authentication authentication, String userId) {
         if (authentication == null) {
             return false;

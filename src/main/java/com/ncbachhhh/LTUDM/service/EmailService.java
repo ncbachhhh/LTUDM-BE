@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class EmailService {
     JavaMailSender mailSender;
 
+    // Gửi OTP reset password qua SMTP; OTP không được lưu plain text ở backend.
     public void sendPasswordResetOtp(String to, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);

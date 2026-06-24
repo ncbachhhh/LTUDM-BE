@@ -17,6 +17,7 @@ import java.security.Principal;
 public class PresenceEventListener {
     PresenceService presenceService;
 
+    // Khi STOMP session connected, mark online nếu event đã có Principal hợp lệ.
     @EventListener
     public void handleConnected(SessionConnectedEvent event) {
         Principal user = event.getUser();
@@ -26,11 +27,13 @@ public class PresenceEventListener {
         presenceService.markOnline(resolveSessionId(event), user.getName());
     }
 
+    // Khi session disconnect, gỡ session khỏi PresenceService.
     @EventListener
     public void handleDisconnected(SessionDisconnectEvent event) {
         presenceService.markOffline(event.getSessionId());
     }
 
+    // Lấy simpSessionId từ headers của connected event.
     private String resolveSessionId(SessionConnectedEvent event) {
         Object sessionId = event.getMessage().getHeaders().get("simpSessionId");
         return sessionId == null ? null : sessionId.toString();

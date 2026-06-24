@@ -35,6 +35,7 @@ import java.util.List;
 public class UserController {
     UserService userService;
 
+    // Cập nhật user theo id; chỉ owner của user do mới được phep sua.
     @PatchMapping("/{userId}")
     @PreAuthorize("@userSecurity.isOwner(authentication, #userId)")
     ApiResponse<UserResponse> updateUser(
@@ -43,77 +44,92 @@ public class UserController {
         return ApiResponse.success(userService.updateUser(userId, request));
     }
 
+    // Lấy thông tin user hiện tại từ JWT trong SecurityContext.
     @GetMapping("/me")
     ApiResponse<UserResponse> getMyInfo() {
         return ApiResponse.success(userService.getMyInfo());
     }
 
+    // Cập nhật một phần profile của user hiện tại.
     @PatchMapping("/profile")
     ApiResponse<UserResponse> updateMyProfile(@RequestBody @Valid UserProfileUpdateRequest request) {
         return ApiResponse.success(userService.updateMyProfile(request));
     }
 
+    // PUT profile hiện đang dùng chung logic với PATCH để giữ API tương thích với FE.
     @PutMapping("/profile")
     ApiResponse<UserResponse> replaceMyProfile(@RequestBody @Valid UserProfileUpdateRequest request) {
         return ApiResponse.success(userService.updateMyProfile(request));
     }
 
+    // Cập nhật tuy chọn cả nhan như notification, theme, sound.
     @PatchMapping("/settings")
     ApiResponse<UserResponse> updateMySettings(@RequestBody @Valid UserSettingsUpdateRequest request) {
         return ApiResponse.success(userService.updateMySettings(request));
     }
 
+    // PUT settings hiện đang dùng chung logic với PATCH.
     @PutMapping("/settings")
     ApiResponse<UserResponse> replaceMySettings(@RequestBody @Valid UserSettingsUpdateRequest request) {
         return ApiResponse.success(userService.updateMySettings(request));
     }
 
+    // Tìm user bằng email và kèm theo relationship state với current user.
     @GetMapping("/search-by-email")
     ApiResponse<UserProfileResponse> searchUserByEmail(@RequestParam("email") String email) {
         return ApiResponse.success(userService.searchUserByEmail(email));
     }
 
+    // Tìm user theo keyword để hiển thị trong luồng kết bạn.
     @GetMapping("/search")
     ApiResponse<List<UserProfileResponse>> searchUsersForFriendRequest(@RequestParam("keyword") String keyword) {
         return ApiResponse.success(userService.searchUsersForFriendRequest(keyword));
     }
 
+    // Lấy profile của user khác, có bổ sung trạng thái bạn bè/block.
     @GetMapping("/{userId}/profile")
     ApiResponse<UserProfileResponse> getUserProfile(@PathVariable("userId") String userId) {
         return ApiResponse.success(userService.getUserProfile(userId));
     }
 
+    // Cập nhật avatar và trả về đầy đủ UserResponse cho màn hình profile.
     @PatchMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<UserResponse> updateMyAvatar(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success(userService.updateMyAvatar(file));
     }
 
+    // Upload avatar profile và trả về URL mới.
     @PostMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> updateMyProfileAvatar(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success(userService.updateMyProfileAvatar(file));
     }
 
+    // Thay avatar profile, dùng chung service với POST để tránh lap logic upload.
     @PutMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> replaceMyProfileAvatar(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success(userService.updateMyProfileAvatar(file));
     }
 
+    // Upload ảnh nền profile và trả về URL mới.
     @PostMapping(value = "/profile/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> updateMyProfileBackground(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success(userService.updateMyProfileBackground(file));
     }
 
+    // Thay ảnh nền profile, dùng chung service với POST.
     @PutMapping(value = "/profile/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<String> replaceMyProfileBackground(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success(userService.updateMyProfileBackground(file));
     }
 
+    // Đổi mật khẩu của user đang đăng nhập.
     @PostMapping("/me/change-password")
     ApiResponse<String> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
         userService.changePassword(request);
         return ApiResponse.success("Password changed successfully.");
     }
 
+    // Vô hiệu hóa tài khoản hiện tại theo logic trong UserService.
     @DeleteMapping("/me")
     ApiResponse<String> deleteMyAccount() {
         userService.deleteMyAccount();

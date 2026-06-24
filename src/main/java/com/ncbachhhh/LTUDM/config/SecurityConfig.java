@@ -26,8 +26,8 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
     private static final String JWT_SECRET_PROPERTY = "${jwt.secret}";
-    private static final String DEFAULT_CORS_ALLOWED_ORIGINS =
-            "${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}";
+    private static final String DEFAULT_CORS_ALLOWED_ORIGIN_PATTERNS =
+            "${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*}";
 
     private static final List<String> ALLOWED_METHODS = List.of(
             "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
@@ -36,18 +36,20 @@ public class SecurityConfig {
     @Value(JWT_SECRET_PROPERTY)
     private String secretKey;
 
-    @Value(DEFAULT_CORS_ALLOWED_ORIGINS)
-    private List<String> allowedOrigins;
+    @Value(DEFAULT_CORS_ALLOWED_ORIGIN_PATTERNS)
+    private List<String> allowedOriginPatterns;
 
+    // Bean hash password chung cho đăng ký, đăng nhập và reset/chặnge password.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // Cấu hình CORS cho REST API, hỗ trợ localhost và LAN origin pattern.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOriginPatterns(allowedOriginPatterns);
         config.setAllowedMethods(ALLOWED_METHODS);
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -59,6 +61,7 @@ public class SecurityConfig {
         return source;
     }
 
+    // Cấu hình security chain: route public/protected và bật JWT resource server.
     @Bean
     SecurityFilterChain filterChain(
             HttpSecurity http,
@@ -70,11 +73,13 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Preflight request cần được pass qua để browser CORS hoat dong.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/auth/change-password").authenticated()
                         .requestMatchers("/auth/**").permitAll()
 
+                        // HTTP handshake của WebSocket public; STOMP CONNECT sẽ tự verify JWT ở interceptor.
                         .requestMatchers("/ws").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
@@ -91,6 +96,7 @@ public class SecurityConfig {
                 .build();
     }
 
+    // Chuyển claim scope trong JWT thành authority của Spring Security.
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
@@ -104,6 +110,7 @@ public class SecurityConfig {
         return jwtAuthenticationConverter;
     }
 
+    // Decoder verify JWT HS256 bằng secret cấu hình trong application/env.
     @Bean
     JwtDecoder jwtDecoder() {
         SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(), "HS256");

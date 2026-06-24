@@ -32,6 +32,7 @@ public class ChatWebSocketController {
     ConversationService conversationService;
     SimpMessagingTemplate messagingTemplate;
 
+    // Nhận text message từ STOMP, lưu DB, rồi broadcast đến topic conversation và preview member.
     @MessageMapping("/chat/{conversationId}")
     public void sendMessage(
             @DestinationVariable String conversationId,
@@ -39,6 +40,7 @@ public class ChatWebSocketController {
             Principal principal) {
 
         request.setConversationId(conversationId);
+        // Ảnh/file cần multipart REST để upload R2; WebSocket chỉ xử lý payload nhẹ.
         if (request.getType() == MessageType.IMAGE) {
             throw new AppException(ErrorCode.IMAGE_MESSAGE_NOT_SUPPORTED_OVER_WEBSOCKET);
         }
@@ -49,6 +51,7 @@ public class ChatWebSocketController {
         sendConversationPreviewToMembers(conversationId);
     }
 
+    // Mark all visible messages as read qua socket và publish read event realtime.
     @MessageMapping("/chat/{conversationId}/read")
     public void markAsRead(@DestinationVariable String conversationId, Principal principal) {
         String userId = requireUserId(principal);
@@ -57,6 +60,7 @@ public class ChatWebSocketController {
         publishReadEvent(conversationId, receipts);
     }
 
+    // Broadcast typing indicator sau khi xác thực user có quyền vào conversation.
     @MessageMapping("/chat/{conversationId}/typing")
     public void typing(
             @DestinationVariable String conversationId,
@@ -74,6 +78,7 @@ public class ChatWebSocketController {
         messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/typing", sanitizedIndicator);
     }
 
+    // Lấy user id từ Principal đã được WebSocketAuthInterceptor gán khi CONNECT.
     private String requireUserId(Principal principal) {
         if (principal == null || !StringUtils.hasText(principal.getName())) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
@@ -81,16 +86,19 @@ public class ChatWebSocketController {
         return principal.getName();
     }
 
+    // Gửi preview conversation mới cho tất cả member sau khi có message mới.
     private void sendConversationPreviewToMembers(String conversationId) {
         conversationService.getConversationMemberIds(conversationId)
                 .forEach(memberId -> sendConversationPreviewToUser(conversationId, memberId));
     }
 
+    // Gửi preview vào user queue riêng của một member.
     private void sendConversationPreviewToUser(String conversationId, String userId) {
         ConversationResponse preview = conversationService.getConversationPreviewForUser(conversationId, userId);
         messagingTemplate.convertAndSendToUser(userId, "/queue/conversations", preview);
     }
 
+    // Tạo và broadcast event read receipt nếu có message mới được đánh dấu đã đọc.
     private void publishReadEvent(String conversationId, List<MessageReceipt> receipts) {
         if (receipts == null || receipts.isEmpty()) {
             return;
@@ -108,6 +116,7 @@ public class ChatWebSocketController {
         messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/read", event);
     }
 
+    // Payload typing indicator gửi qua STOMP; userId sẽ được server overwrite bằng Principal.
     public record TypingIndicator(String userId, String displayName, boolean isTyping) {
     }
 }

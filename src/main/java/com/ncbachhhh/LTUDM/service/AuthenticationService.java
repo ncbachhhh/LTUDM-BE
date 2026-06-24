@@ -52,6 +52,7 @@ public class AuthenticationService {
     @Value("${jwt.refresh-token-expiration:604800}")
     private long refreshTokenExpiration;
 
+    // Đăng nhập bằng email/password, sau do cấp access/refresh token nếu user hợp lệ.
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -64,6 +65,7 @@ public class AuthenticationService {
         return buildTokenResponse(user);
     }
 
+    // Refresh token theo có che rotate: verify refresh token cũ, revoke nó, rồi cấp cặp token mới.
     public AuthenticationResponse refreshToken(RefreshTokenRequest request) throws ParseException, JOSEException {
         SignedJWT refreshToken = verifyToken(request.getRefreshToken());
         revoke(refreshToken);
@@ -75,6 +77,7 @@ public class AuthenticationService {
         return buildTokenResponse(user);
     }
 
+    // Logout bằng cách revoke token được gửi len; token invalid/expired thì coi như đã logout.
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
         try {
             revoke(verifyToken(request.getToken()));
@@ -83,6 +86,7 @@ public class AuthenticationService {
         }
     }
 
+    // Đóng gói access token và refresh token vào response chung của auth API.
     private AuthenticationResponse buildTokenResponse(User user) {
         return AuthenticationResponse.builder()
                 .accessToken(generateToken(user.getId(), String.valueOf(user.getRole()), accessTokenExpiration))
@@ -91,12 +95,14 @@ public class AuthenticationService {
                 .build();
     }
 
+    // Chặn user inactive/banned đăng nhập hoặc refresh token.
     private void ensureActive(User user) {
         if (!user.isActive()) {
             throw new AppException(ErrorCode.USER_BANNED);
         }
     }
 
+    // Lưu jti của JWT vào bằng invalidated_tokens để token không dùng lại được.
     private void revoke(SignedJWT token) throws ParseException {
         invalidatedTokenRepository.save(InvalidatedToken.builder()
                 .id(token.getJWTClaimsSet().getJWTID())
@@ -104,6 +110,7 @@ public class AuthenticationService {
                 .build());
     }
 
+    // Parse và verify JWT bằng HS256, dong thời kiểm tra expiry và blacklist.
     private SignedJWT verifyToken(String token) throws ParseException, JOSEException {
         SignedJWT signedJwt = SignedJWT.parse(token);
         JWSVerifier verifier = new MACVerifier(secretKey.getBytes());
@@ -119,11 +126,13 @@ public class AuthenticationService {
         return signedJwt;
     }
 
+    // JWT het han nếu không có exp hoặc exp nằm trước thời điểm hiện tại.
     private boolean isExpired(SignedJWT signedJwt) throws ParseException {
         Date expiration = signedJwt.getJWTClaimsSet().getExpirationTime();
         return expiration == null || expiration.before(new Date());
     }
 
+    // Tạo JWT có subject là userId, scope là ROLE_<role>, và jti để phục vụ revoke.
     private String generateToken(String userId, String role, long expirationSeconds) {
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(userId)

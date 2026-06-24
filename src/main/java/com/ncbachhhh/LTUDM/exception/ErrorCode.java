@@ -101,6 +101,7 @@ public enum ErrorCode {
     private final int code;
     private final String message;
 
+    // Gán numeric code và message mặc định cho từng lỗi nghiệp vụ.
     ErrorCode(int code, String message) {
         this.code = code;
         this.message = message;

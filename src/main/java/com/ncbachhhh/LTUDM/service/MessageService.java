@@ -72,6 +72,7 @@ public class MessageService {
             "(?i)(?<![\\w@])((?:https?://|www\\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:/[^\\s<]*)?)"
     );
 
+    // Lấy current user id từ SecurityContext cho các REST workflow.
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -80,14 +81,17 @@ public class MessageService {
         return authentication.getName();
     }
 
+    // Gửi message từ REST multipart, sender lấy từ JWT.
     public MessageResponse sendMessage(MessageRequest request, MultipartFile imageFile) {
         return sendMessage(request, imageFile, getCurrentUserId());
     }
 
+    // Gửi message từ WebSocket, sender đã được resolve từ Principal.
     public MessageResponse sendMessage(MessageRequest request, String senderId) {
         return sendMessage(request, null, senderId);
     }
 
+    // Workflow gửi message chung: check quyền, resolve content/file/reply, save message và attachment.
     public MessageResponse sendMessage(MessageRequest request, MultipartFile file, String senderId) {
         if (!StringUtils.hasText(senderId)) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
@@ -99,6 +103,7 @@ public class MessageService {
         if (message.getType() == null) {
             message.setType(MessageType.TEXT);
         }
+        // Reply chỉ hợp lệ khi message gốc visible với sender và cùng conversation.
         message.setReplyToMessageId(resolveReplyToMessageId(request, senderId));
         message.setContent(resolveMessageContent(request, file, senderId, message.getType()));
 
@@ -108,6 +113,7 @@ public class MessageService {
         return toMessageResponse(savedMessage, senderId, attachment);
     }
 
+    // Chuyển request/file thanh content lưu DB: text giu content, image/file upload R2 và lưu URL.
     private String resolveMessageContent(
             MessageRequest request,
             MultipartFile file,
@@ -122,6 +128,7 @@ public class MessageService {
             return r2StorageService.uploadMessageFile(request.getConversationId(), senderId, file);
         }
 
+        // TEXT message không được kèm multipart file để tránh sai type/content.
         if (file != null && !file.isEmpty()) {
             throw new AppException(ErrorCode.BAD_REQUEST);
         }
@@ -134,6 +141,7 @@ public class MessageService {
         return content;
     }
 
+    // Lấy message visible theo trang và batch load attachment/pin để tránh query từng item.
     public Page<MessageResponse> getMessagesByConversationPaged(String conversationId, int page, int size) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -152,6 +160,7 @@ public class MessageService {
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
 
+    // Search text message visible trong conversation, có validate keyword tối thiểu.
     public Page<MessageResponse> searchMessages(String conversationId, String keyword, int page, int size) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -179,6 +188,7 @@ public class MessageService {
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
 
+    // Pin message visible, nếu chưa pin và chưa vượt giới hạn pin của conversation.
     @Transactional
     public MessageResponse pinMessage(String messageId) {
         String userId = getCurrentUserId();
@@ -187,6 +197,7 @@ public class MessageService {
 
         PinnedMessage pinnedMessage = pinnedMessageRepository.findByMessageId(messageId).orElse(null);
         if (pinnedMessage == null) {
+            // Giới hạn pin để UI không phải xử lý danh sách pin quá dài.
             if (pinnedMessageRepository.countByConversationId(message.getConversationId()) >= MAX_PINNED_MESSAGES_PER_CONVERSATION) {
                 throw new AppException(ErrorCode.PINNED_MESSAGE_LIMIT_EXCEEDED);
             }
@@ -202,6 +213,7 @@ public class MessageService {
         return toMessageResponse(message, userId, getAttachment(messageId), pinnedMessage);
     }
 
+    // Gỡ pin message nếu current user có quyền vào conversation.
     @Transactional
     public MessageResponse unpinMessage(String messageId) {
         String userId = getCurrentUserId();
@@ -212,6 +224,7 @@ public class MessageService {
         return toMessageResponse(message, userId, getAttachment(messageId), null);
     }
 
+    // Thu hồi message: chỉ sender được recall, content/attachment sẽ bị ẩn trong response.
     @Transactional
     public MessageResponse recallMessage(String messageId) {
         String userId = getCurrentUserId();
@@ -233,6 +246,7 @@ public class MessageService {
         return toMessageResponse(message, userId);
     }
 
+    // Lấy danh sách pinned message visible với current user theo thứ tự pin mới nhất.
     public List<MessageResponse> getPinnedMessages(String conversationId) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -253,6 +267,7 @@ public class MessageService {
                 .filter(message -> !isDeletedForUser(message.getId(), userId))
                 .collect(Collectors.toMap(Message::getId, message -> message));
 
+        // Batch load attachment cho pinned messages để map response không query lặp lại.
         Map<String, Attachment> attachmentsByMessageId = getAttachmentsByMessageId(messagesById.values().stream().toList());
 
         return pinnedMessages.stream()
@@ -267,14 +282,17 @@ public class MessageService {
                 .toList();
     }
 
+    // Lấy media image trong conversation.
     public Page<MessageResponse> getConversationImages(String conversationId, int page, int size) {
         return getConversationMessagesByType(conversationId, MessageType.IMAGE, page, size);
     }
 
+    // Lấy media file trong conversation.
     public Page<MessageResponse> getConversationFiles(String conversationId, int page, int size) {
         return getConversationMessagesByType(conversationId, MessageType.FILE, page, size);
     }
 
+    // Lấy một số image gần nhất để hiện preview nhanh trong info panel.
     public List<MessageResponse> getConversationImagePreview(String conversationId, int limit) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -298,6 +316,7 @@ public class MessageService {
                 .toList();
     }
 
+    // Trích xuất link từ các text message visible và phân trang trên danh sách link đã parse.
     public Page<ConversationLinkResponse> getConversationLinks(String conversationId, int page, int size) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -312,6 +331,7 @@ public class MessageService {
         return new PageImpl<>(links.subList(start, end), pageable, links.size());
     }
 
+    // Đánh dấu một message đã đọc cho current user; sender từ đọc message của mình thì không tạo receipt.
     public MessageSeenByResponse markAsRead(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
@@ -335,10 +355,12 @@ public class MessageService {
                 .orElse(null);
     }
 
+    // Mark all read cho current user.
     public List<MessageReceipt> markAllAsRead(String conversationId) {
         return markAllAsRead(conversationId, getCurrentUserId());
     }
 
+    // Tạo receipt cho tất cả visible messages chưa đọc, bỏ qua message do chính user gửi.
     public List<MessageReceipt> markAllAsRead(String conversationId, String userId) {
         ensureCanAccessConversation(conversationId, userId);
 
@@ -361,6 +383,7 @@ public class MessageService {
         return newReceipts;
     }
 
+    // Soft delete message riêng cho current user bằng MessageDeletion.
     public void deleteMessage(String messageId) {
         String userId = getCurrentUserId();
         Message message = messageRepository.findById(messageId)
@@ -376,6 +399,7 @@ public class MessageService {
         }
     }
 
+    // Đếm unread message của conversation theo current user.
     public long countUnreadMessages(String conversationId) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -383,6 +407,7 @@ public class MessageService {
         return messageRepository.countUnreadMessages(conversationId, userId);
     }
 
+    // Lấy message mới nhất visible với current user.
     public MessageResponse getLatestMessage(String conversationId) {
         String userId = getCurrentUserId();
         ensureCanAccessConversation(conversationId, userId);
@@ -394,17 +419,21 @@ public class MessageService {
         return toMessageResponse(page.getContent().getFirst(), userId);
     }
 
+    // Map message sang response và tự load attachment/pin nếu cần.
     private MessageResponse toMessageResponse(Message message, String userId) {
         return toMessageResponse(message, userId, getAttachment(message.getId()), getPinnedMessage(message.getId()));
     }
 
+    // Map message sang response với attachment đã có sẵn.
     private MessageResponse toMessageResponse(Message message, String userId, Attachment attachment) {
         return toMessageResponse(message, userId, attachment, getPinnedMessage(message.getId()));
     }
 
+    // Map message sang response đầy đủ, xử lý recalled, read state, seen by, pin và reply preview.
     private MessageResponse toMessageResponse(Message message, String userId, Attachment attachment, PinnedMessage pinnedMessage) {
         MessageResponse response = messageMapper.toMessageResponse(message);
         if (message.isRecalled()) {
+            // Message đã recall không trả content/attachment nữa để client không hien nội dung cũ.
             response.setContent(null);
             attachment = null;
         }
@@ -418,6 +447,7 @@ public class MessageService {
         return response;
     }
 
+    // Map receipt sang seen-by DTO, gồm thêm profile và nickname trong conversation.
     public MessageSeenByResponse toSeenByResponse(MessageReceipt receipt, String conversationId) {
         if (receipt == null || receipt.getId() == null) {
             return null;
@@ -442,6 +472,7 @@ public class MessageService {
                 .build();
     }
 
+    // Build danh sách user đã đọc message, bỏ qua sender.
     private List<MessageSeenByResponse> buildSeenByResponses(Message message) {
         return messageReceiptRepository.findByIdMessageId(message.getId()).stream()
                 .filter(receipt -> !receipt.getId().getUserId().equals(message.getSenderId()))
@@ -450,6 +481,7 @@ public class MessageService {
                 .toList();
     }
 
+    // Build preview message được reply, null nếu reply target đã bị xóa với user hiện tại.
     private MessageReplyResponse buildReplyResponse(String replyToMessageId, String userId) {
         if (!StringUtils.hasText(replyToMessageId) || isDeletedForUser(replyToMessageId, userId)) {
             return null;
@@ -466,6 +498,7 @@ public class MessageService {
                 .orElse(null);
     }
 
+    // Lấy image/file messages theo type, batch load attachment/pin rồi map thành page response.
     private Page<MessageResponse> getConversationMessagesByType(
             String conversationId,
             MessageType type,
@@ -495,6 +528,7 @@ public class MessageService {
         return new PageImpl<>(content, pageable, messages.getTotalElements());
     }
 
+    // Trich link từ một text message và tạo DTO cho từng link tìm thấy.
     private List<ConversationLinkResponse> extractLinks(Message message) {
         if (!StringUtils.hasText(message.getContent())) {
             return List.of();
@@ -504,6 +538,7 @@ public class MessageService {
         Matcher matcher = LINK_PATTERN.matcher(message.getContent());
         while (matcher.find()) {
             String url = trimTrailingUrlPunctuation(matcher.group(1));
+            // Bỏ qua fragment trong email và các match rỗng sau khi trim dấu câu.
             if (!StringUtils.hasText(url) || isLikelyEmailFragment(message.getContent(), matcher.start(1))) {
                 continue;
             }
@@ -521,6 +556,7 @@ public class MessageService {
         return links;
     }
 
+    // Chuẩn hóa URL thiếu protocol để FE có link click được.
     private String normalizeUrl(String url) {
         String lowerUrl = url.toLowerCase();
         if (lowerUrl.startsWith("http://") || lowerUrl.startsWith("https://")) {
@@ -529,10 +565,12 @@ public class MessageService {
         return "https://" + url;
     }
 
+    // Phân biệt domain trong email với URL thật sự.
     private boolean isLikelyEmailFragment(String content, int matchStart) {
         return matchStart > 0 && content.charAt(matchStart - 1) == '@';
     }
 
+    // Loại dấu câu ở cuối URL như dấu chấm/dấu ngoặc khi URL nằm trong câu văn.
     private String trimTrailingUrlPunctuation(String url) {
         String trimmed = url;
         while (!trimmed.isEmpty() && ".,;:!?)\\]}\"'".indexOf(trimmed.charAt(trimmed.length() - 1)) >= 0) {
@@ -541,6 +579,7 @@ public class MessageService {
         return trimmed;
     }
 
+    // Validate reply target: phải visible, cùng conversation và chưa bị recall.
     private String resolveReplyToMessageId(MessageRequest request, String senderId) {
         String replyToMessageId = request.getReplyToMessageId();
         if (!StringUtils.hasText(replyToMessageId)) {
@@ -558,6 +597,7 @@ public class MessageService {
         return repliedMessage.getId();
     }
 
+    // Tạo attachment metadata nếu message type là IMAGE/FILE.
     private Attachment createAttachmentIfNeeded(Message message, MultipartFile file) {
         if (!hasAttachment(message)) {
             return null;
@@ -572,6 +612,7 @@ public class MessageService {
         return attachmentRepository.save(attachment);
     }
 
+    // Lấy tên file gốc từ multipart, fallback nếu client không gửi filename.
     private String resolveOriginalFilename(MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
         if (!StringUtils.hasText(originalFilename)) {
@@ -580,10 +621,12 @@ public class MessageService {
         return originalFilename.trim();
     }
 
+    // Load attachment theo message id, null nếu text message hoặc không có attachment.
     private Attachment getAttachment(String messageId) {
         return attachmentRepository.findByMessageId(messageId).orElse(null);
     }
 
+    // Batch load attachments cho danh sách messages có type IMAGE/FILE.
     private Map<String, Attachment> getAttachmentsByMessageId(List<Message> messages) {
         List<String> messageIds = messages.stream()
                 .filter(this::hasAttachment)
@@ -597,6 +640,7 @@ public class MessageService {
                 .collect(Collectors.toMap(Attachment::getMessageId, attachment -> attachment));
     }
 
+    // Batch load pinned records cho danh sách messages.
     private Map<String, PinnedMessage> getPinnedMessagesByMessageId(List<Message> messages) {
         List<String> messageIds = messages.stream()
                 .map(Message::getId)
@@ -609,14 +653,17 @@ public class MessageService {
                 .collect(Collectors.toMap(PinnedMessage::getMessageId, pinnedMessage -> pinnedMessage));
     }
 
+    // Load pinned record của một message.
     private PinnedMessage getPinnedMessage(String messageId) {
         return pinnedMessageRepository.findByMessageId(messageId).orElse(null);
     }
 
+    // Message có attachment khi type là IMAGE hoặc FILE.
     private boolean hasAttachment(Message message) {
         return message.getType() == MessageType.IMAGE || message.getType() == MessageType.FILE;
     }
 
+    // Load message nếu nó còn visible với user, ngược lại trả MESSAGE_NOT_FOUND.
     private Message getVisibleMessageForUser(String messageId, String userId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
@@ -626,10 +673,12 @@ public class MessageService {
         return message;
     }
 
+    // Kiểm tra message đã bị soft delete riêng cho user chưa.
     private boolean isDeletedForUser(String messageId, String userId) {
         return messageDeletionRepository.existsById(new MessageDeletionId(messageId, userId));
     }
 
+    // Map attachment entity sang response DTO.
     private AttachmentResponse toAttachmentResponse(Attachment attachment) {
         if (attachment == null) {
             return null;
@@ -644,6 +693,7 @@ public class MessageService {
                 .build();
     }
 
+    // Guard public cho controller/websocket: user phải là member của conversation.
     public void ensureCanAccessConversation(String conversationId, String userId) {
         if (!StringUtils.hasText(conversationId) || !StringUtils.hasText(userId)) {
             throw new AppException(ErrorCode.NOT_CONVERSATION_MEMBER);
@@ -654,11 +704,13 @@ public class MessageService {
         }
     }
 
+    // Guard khi gửi message: phải truy cập được conversation và direct chat phải còn là bạn bè.
     private void ensureCanSendMessage(String conversationId, String userId) {
         ensureCanAccessConversation(conversationId, userId);
         ensureDirectConversationIsBetweenFriends(conversationId, userId);
     }
 
+    // Direct conversation chỉ cho gửi nếu hai user vẫn ACCEPTED friends.
     private void ensureDirectConversationIsBetweenFriends(String conversationId, String userId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
